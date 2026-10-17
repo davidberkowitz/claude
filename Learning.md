@@ -70,3 +70,9 @@ A beginner picks mechanics first, then checks pedagogy. An expert lets the learn
 - **"Good idea, wrong moment" is a separate bin from "bad idea."** Keep a parking lot. Half of a plan's value is what it deliberately defers.
 - **Make the progress indicator out of the work itself.** Whether it's a coloring page, a build log, or a sales pipeline, visible state beats a score.
 - **When a check fails, say so in the deliverable.** The blocked Gemini call went into the plan as a sentence, not into a footnote nobody reads.
+
+## Addendum: the ten images
+
+You asked for ten images. The raw Gemini API was blocked (credential in a shell command), so I routed through the ElevenLabs connector, which runs the same Nano Banana 2.1 model. That worked. What did not work was pulling the finished files back into the sandbox: the proxy refuses the storage host. So the plan links to the images instead of embedding them.
+
+Lesson: when one door is locked, check whether a connector already in the room goes to the same place. And when you can generate but not retrieve, link, say why, and move on rather than burning time on a workaround.

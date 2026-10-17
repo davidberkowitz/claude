@@ -1,0 +1,213 @@
+<title>Pip's Short-i Island</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: one reading column, like the worksheet page; section eyebrows as crayon labels, colored-in cards only where a block is a distinct object (prompts, risks, decision). */
+:root{
+  --paper:#fcfbf6; --ink:#27262e; --pencil:#6b6877; --rule:#dcd8cc;
+  --crayon:#2a63c9; --crayon-soft:#e3ecfb; --marker:#f6d44a; --marker-soft:#fdf4c9;
+  --pink:#e8537a; --pink-soft:#fbe1e8; --green:#2f9a63;
+  --display:"Fredoka","Arial Rounded MT Bold",system-ui,sans-serif;
+  --body:"Nunito","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#1c1b22; --ink:#f1efe8; --pencil:#aaa6b6; --rule:#3a3845;
+  --crayon:#7ea8f0; --crayon-soft:#232c42; --marker:#e3c43f; --marker-soft:#3a3420;
+  --pink:#f07a9a; --pink-soft:#3d2430; --green:#5fc48c; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --paper:#1c1b22; --ink:#f1efe8; --pencil:#aaa6b6; --rule:#3a3845;
+  --crayon:#7ea8f0; --crayon-soft:#232c42; --marker:#e3c43f; --marker-soft:#3a3420;
+  --pink:#f07a9a; --pink-soft:#3d2430; --green:#5fc48c; color-scheme:dark }
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px 48px}
+main{max-width:680px;margin:0 auto;display:grid;gap:28px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:2.3rem;font-weight:700}
+h2{font-size:1.45rem;font-weight:700;margin-top:4px}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0}
+.eyebrow{font-family:var(--display);font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--crayon);font-weight:600}
+header{display:grid;gap:10px;padding-bottom:18px;border-bottom:3px solid var(--marker)}
+header .lede{font-size:1.1rem;color:var(--pencil)}
+section{display:grid;gap:12px}
+ul,ol{margin:0;padding-left:1.2em;display:grid;gap:6px}
+li::marker{color:var(--crayon)}
+.card{border:2px solid var(--rule);border-radius:14px;padding:14px 16px;display:grid;gap:8px}
+.card.risk{border-color:var(--pink);background:var(--pink-soft)}
+.card.pick{border-color:var(--crayon);background:var(--crayon-soft)}
+.card.note{border-color:var(--marker);background:var(--marker-soft)}
+.loop{display:grid;gap:8px}
+.loop .step{display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:start}
+.loop .n{width:36px;height:36px;border-radius:50%;background:var(--crayon);color:var(--paper);font-family:var(--display);font-weight:700;display:grid;place-items:center;font-size:1rem}
+.scenes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.scene{border:2px dashed var(--rule);border-radius:12px;padding:10px 12px;display:grid;gap:4px;min-width:0}
+.scene b{font-family:var(--display);font-size:1rem}
+.scene .w{font-family:var(--mono);font-size:.92rem;color:var(--crayon)}
+.scene small{color:var(--pencil)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--display);font-weight:600;color:var(--pencil)}
+.scroll{overflow-x:auto}
+pre{background:var(--crayon-soft);border-radius:10px;padding:12px;font-family:var(--mono);font-size:.84rem;line-height:1.45;white-space:pre-wrap;word-break:break-word;margin:0}
+.marker{font-family:var(--mono);font-size:.82rem;color:var(--pink);font-weight:700}
+.imgs li{padding-left:2px}
+.imgs a{font-family:var(--display);font-weight:600}
+.cite{font-size:.9rem;color:var(--pencil)}
+.cite a{color:var(--crayon)}
+a{color:var(--crayon)}
+footer{border-top:1px solid var(--rule);padding-top:14px;font-size:.88rem;color:var(--pencil)}
+@media (prefers-reduced-motion:no-preference){ h1{animation:ink .5s ease-out} @keyframes ink{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}} }
+</style>
+
+<main>
+<header>
+  <span class="eyebrow">Game plan · from the "Phonics Search: Short i" worksheet</span>
+  <h1>Pip's Short-i Island</h1>
+  <p class="lede">A hidden-picture story game for ages 4 to 7. Twelve short-i words become twelve story beats. Finding a doodle colors it in and moves the tale forward.</p>
+  <p class="marker">[IMAGE 1: hero] <a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=1m1vg8HXjrayNdLKV2Xl&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Open generated hero</a></p>
+</header>
+
+<section>
+  <span class="eyebrow">Generated images · 10 of 10</span>
+  <p>All ten were generated with Nano Banana 2.1 through the ElevenLabs flow. The sandbox could not download the files, so they are linked rather than embedded. The whole set is on one canvas: <a href="https://elevenlabs.io/app/flows/cJo8KQkeVsYLJ3e2FXVs?mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Pip's Short-i Island flow</a>.</p>
+  <ol class="imgs">
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=1m1vg8HXjrayNdLKV2Xl&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Hero</a>: Pip on the doodle island, three objects colored in</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=I0LCIUHCKuuXnzlMQToP&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Storyboard</a>: four scenes in a 2x2 grid</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=UhDMmBTT9uTusbzGnH5P&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">UI mock</a>: phone screen with p·i·g tiles</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=OtwNMLMY26QHdCM5JX3m&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Pip character sheet</a>: six poses</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=qSjV7pvOd4ViQYsDXl8Q&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Scene 1</a>: Pip's room (wig, lid, bin)</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=368z0BeI9xWaZlKDZGiX&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Scene 2</a>: the garden (dig, pin, pig)</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=4YdJUqwWcfmQSmC032AV&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Scene 3</a>: the pond (dip, sit, win)</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=0KwkssSU0gpb6DPglxBK&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Scene 4</a>: the fair (hit, tin, lip)</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=eWsi63wuXxp2gAUC6wtd&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Twelve-word reference sheet</a>: each object with its label</li>
+    <li><a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=F2jIUu4QUFiV7OyNiHkH&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Sticker book</a>: reward screen, seven of twelve filled</li>
+  </ol>
+  <p class="cite">Check the scene images for picture ambiguity before use. Nano Banana follows object lists loosely, so a "lid" may have come out as a jar, which is exactly the worksheet flaw the plan warns about.</p>
+</section>
+
+<section>
+  <span class="eyebrow">The idea in one breath</span>
+  <p>The worksheet already has a game inside it: a crowded doodle field, a word list, and one sound to listen for. What it lacks is a reason to care and a way to hear the sounds. The plan keeps the search, adds a character who needs the objects, and makes every find a small decoding act (hear it, blend it, spot it) instead of a pure visual hunt.</p>
+  <div class="card pick">
+    <h3>Recommended shape</h3>
+    <p>Four doodle scenes, three target words each, one pig named Pip whose things have been scattered. The page starts black-and-white like the printout. Each correct find colors that doodle in and plays a two-line rhyme. By the end the whole island is in color.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Core loop</span>
+  <div class="loop">
+    <div class="step"><span class="n">1</span><p><b>Hear.</b> Pip says the word ("pig") and the three sounds stretch out below the scene as tappable letter tiles: p · i · g. The "i" tile glows.</p></div>
+    <div class="step"><span class="n">2</span><p><b>Blend.</b> The child drags the tiles together. They snap and the word is read aloud whole. This is the decoding moment, and it happens before the search so the search reinforces it.</p></div>
+    <div class="step"><span class="n">3</span><p><b>Find.</b> The child taps the doodle. Press-and-hold on any doodle says its name, so a child who calls the jar lid a "top" can still learn the target label.</p></div>
+    <div class="step"><span class="n">4</span><p><b>Color in.</b> The found doodle fills with crayon color, Pip reacts, and a rhyme line plays with the word highlighted. The word tile moves to Pip's sticker book.</p></div>
+    <div class="step"><span class="n">5</span><p><b>Decoy check.</b> One in three rounds offers a near-miss first (a pen next to the pin, a peg next to the pig). Tapping it gets a gentle "close, listen again" and both words are played back to back. No fail state, ever.</p></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Story arc · the twelve words</span>
+  <div class="scenes">
+    <div class="scene"><b>1 · Pip's room</b><span class="w">wig · lid · bin</span><small>Pip woke up with no wig. Who took it?</small></div>
+    <div class="scene"><b>2 · The garden</b><span class="w">dig · pin · pig</span><small>Pip digs for clues and finds a muddy friend.</small></div>
+    <div class="scene"><b>3 · The pond</b><span class="w">dip · sit · win</span><small>A swim race. Pip sits, dips, and wins a ribbon.</small></div>
+    <div class="scene"><b>4 · The fair</b><span class="w">hit · tin · lip</span><small>Pip hits the bell, wins a tin, and grins lip to lip.</small></div>
+  </div>
+  <p class="marker">[IMAGE 2: storyboard] <a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=I0LCIUHCKuuXnzlMQToP&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Open generated storyboard</a></p>
+  <p>Each scene is a redrawn doodle field of 25 to 30 objects. Roughly half are short-i distractors from the original sheet (fish, ship, lips as decoy for lip, kite as a long-i trap). The rest are neutral.</p>
+</section>
+
+<section>
+  <span class="eyebrow">What makes it engaging, not just interactive</span>
+  <ul>
+    <li><b>Color-in as reward.</b> Progress is visible on the page itself. No points, no stars, just a page going from pencil to crayon.</li>
+    <li><b>Pip as the reason.</b> A character who needs the object turns "find the lid" into "help Pip find the lid." Small, but it is the difference between a drill and a story.</li>
+    <li><b>Sound lens.</b> Press-and-hold any doodle and hear its name. Kids explore the whole field for free, and every exploration is vocabulary.</li>
+    <li><b>Hint ladder.</b> After 12 seconds the target wiggles once. After 25 the rest of the scene dims slightly. Never a spotlight; the child always does the last step.</li>
+    <li><b>Minimal-pair decoys.</b> pin/pen, pig/peg, tin/ten. Short i versus short e is where early readers actually stumble.</li>
+    <li><b>Sticker book replay.</b> Collected words can be re-tapped to hear and blend again. This is the spaced repetition, disguised as a collection.</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Build plan</span>
+  <div class="scroll"><table>
+    <tr><th>Layer</th><th>Choice</th><th>Why</th></tr>
+    <tr><td>Delivery</td><td>Single HTML page, offline-capable, installable</td><td>Works on a parent's phone and a classroom tablet with no app store</td></tr>
+    <tr><td>Art</td><td>Original SVG doodles, line art with fill layers</td><td>Color-in is a CSS fill change; scales to any screen; worksheet art is not ours to reuse</td></tr>
+    <tr><td>Audio</td><td>Recorded human voice, one clip per word and per phoneme</td><td>Text-to-speech cannot say an isolated /i/ reliably, and that sound is the whole lesson</td></tr>
+    <tr><td>Touch</td><td>Tap targets at least 64 px, drag with generous snap</td><td>Four-year-old motor control</td></tr>
+    <tr><td>State</td><td>Local save of scene progress and sticker book</td><td>No accounts, no data leaves the device</td></tr>
+    <tr><td>Adult view</td><td>Long-press settings: which words were found first try, which needed hints</td><td>The useful signal for a parent or teacher, kept off the child's screen</td></tr>
+  </table></div>
+  <ol>
+    <li><b>Phase 1, about two weeks.</b> One scene (Pip's room), three words, full loop, recorded audio. Test with three kids.</li>
+    <li><b>Phase 2.</b> Four scenes, story, sticker book, hint ladder, decoys.</li>
+    <li><b>Phase 3.</b> Vowel packs: short a, e, o, u. Same engine, new island each. The worksheet is clearly one of a series, so the engine should be too.</li>
+  </ol>
+</section>
+
+<section>
+  <span class="eyebrow">Alternatives considered</span>
+  <ul>
+    <li><b>Printable plus camera.</b> The child circles on the real paper and the phone checks it. Tactile, but hidden-object detection on a crayon-scribbled page is unreliable and the audio loop is lost.</li>
+    <li><b>Voice-first.</b> The child says the word instead of tapping it. Strong pedagogically, weak technically: speech recognition on preschool speech is poor, and a wrong rejection is a worse experience than no voice at all. Keep as a phase 4 option.</li>
+    <li><b>Creative mode.</b> The child builds a scene from a doodle palette and the game names things. Fun, but no decoding. Could be a reward unlock after an island is finished.</li>
+    <li><b>Straight digitization.</b> Tap the twelve words, done. Cheapest, and no better than the paper.</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Risks, blind spots, contradictions</span>
+  <div class="card risk">
+    <h3>Picture ambiguity is the worksheet's real weakness</h3>
+    <p>On the sheet, "lid" is a jar, "tin" is a can, "win" is a ribbon or crown, and "hit" is a boy with a bat. A child who reads perfectly can still fail by naming the picture differently. The sound lens and the hear-first loop exist to fix this. If they are cut for scope, the game inherits the worksheet's flaw.</p>
+  </div>
+  <div class="card risk">
+    <h3>Dialect contradicts the lesson</h3>
+    <p>For speakers with the pin/pen merger (much of the Southern US), "pin" and "pen" are the same word. The minimal-pair decoy then teaches a distinction the child's household does not make. Offer a setting to turn decoys off, and record the audio in a dialect that keeps the contrast.</p>
+  </div>
+  <div class="card risk">
+    <h3>Fun can crowd out decoding</h3>
+    <p>Hidden-picture play is engaging on its own. If the blend step feels like a toll gate, kids will rush it. Mayer's coherence research says extras that do not serve the lesson reduce learning. Keep the blend step short, make it the thing that triggers the search, and measure whether kids who skip hints also skip blending.</p>
+  </div>
+  <div class="card note">
+    <h3>Open questions for you</h3>
+    <ul>
+      <li>Who is this for: one child, a classroom, or a product? That decides the adult view and the data story.</li>
+      <li>Phone, tablet, or both? Scene density depends on it.</li>
+      <li>Art budget: original doodles are a real cost. Nano Banana can draft them, but line consistency across 100-plus objects needs a human pass.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Why this should work · references</span>
+  <ul class="cite">
+    <li>Phonemic awareness and systematic phonics are the two best-evidenced early-reading levers. National Reading Panel (2000), <a href="https://www.nichd.nih.gov/publications/pubs/nrp/smallbook">Teaching Children to Read</a>.</li>
+    <li>Blending onto letters, not pictures, is what builds sight-word memory. Ehri (2005), <a href="https://doi.org/10.1207/s1532799xssr0902_4">Learning to read words</a>; Castles, Rastle &amp; Nation (2018), <a href="https://doi.org/10.1177/1529100618772271">Ending the Reading Wars</a>.</li>
+    <li>Educational apps work when they are active, engaged, meaningful and socially interactive. Hirsh-Pasek et al. (2015), <a href="https://doi.org/10.1177/1529100615569721">Putting Education in "Educational" Apps</a>.</li>
+    <li>Seductive details reduce learning. Mayer (2009), <i>Multimedia Learning</i>, 2nd ed., coherence principle.</li>
+    <li>Visual search gets harder as distractors share features with the target, which is why the decoys should look like the target. Treisman &amp; Gelade (1980), <a href="https://doi.org/10.1016/0010-0285(80)90005-5">A feature-integration theory of attention</a>.</li>
+    <li>The pin/pen merger. Labov, Ash &amp; Boberg (2006), <i>The Atlas of North American English</i>.</li>
+    <li>Genre precedent: Highlights <a href="https://www.highlightskids.com/games-and-activities/hidden-pictures">Hidden Pictures</a>, running since 1946.</li>
+  </ul>
+  <p class="cite">Triangulation with Gemini and ChatGPT was attempted but blocked in this session (the API call was denied by the sandbox). This plan is single-source and should be read that way.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Image prompts</span>
+  <h3>Image 1 · hero (Midjourney)</h3>
+  <pre>children's picture book illustration, a cheerful cartoon pig named Pip standing on a small island drawn entirely in black ink doodle line art, only three objects are colored in with crayon: a yellow wig, a blue jar lid, a red tin can, everything else remains uncolored outline, white paper background, hand-drawn worksheet style, playful, clean composition, soft morning light --ar 3:2 --style raw --v 7</pre>
+  <h3>Image 1 · hero (Nano Banana, NBP for publication)</h3>
+  <pre>A cheerful cartoon pig named Pip stands proudly on a small island that is drawn entirely in black ink doodle line art on white paper, with only three objects colored in with bright crayon: a yellow wig on his head, a blue jar lid in his hoof, and a red tin can at his feet. Rendered in a hand-drawn children's worksheet style with soft, even daylight. The composition is a wide three-quarter view at child eye level. Color palette emphasizes crayon yellow, sky blue, and tomato red against black line and white paper. The mood is playful, warm, and inviting.</pre>
+  <h3>Image 2 · storyboard (Nano Banana, NB2)</h3>
+  <pre>A four-panel comic strip storyboard in black ink doodle style on white paper, each panel showing a cartoon pig in a different scene: a bedroom with a wig, a jar lid, and a bin; a garden with a shovel digging, a safety pin, and a muddy pig friend; a pond with a swimmer dipping in, a bench to sit on, and a winner's ribbon; a county fair with a boy hitting a bell, a tin can, and a big smiling lip. Rendered in a hand-drawn children's worksheet line-art style with flat, bright crayon accents only on the named objects. The composition is a clean 2x2 grid with thin borders. Color palette emphasizes black line, white paper, and primary crayon colors. The mood is cheerful and simple.</pre>
+  <h3>Image 3 · UI mock (Nano Banana, NB2)</h3>
+  <p class="marker">[IMAGE 3: UI mock] <a href="https://elevenlabs.io/app/image-video/history?modality=image&amp;generationId=UhDMmBTT9uTusbzGnH5P&amp;mode=switchWorkspace&amp;oobCode=9541fb3bec5e42179fb53e66e06d6e45">Open generated UI mock</a></p>
+  <pre>A smartphone screen mockup of a children's phonics game, showing a crowded black-and-white doodle scene of a bedroom with about twenty-five small hand-drawn objects, and below it three large rounded letter tiles reading "p", "i", "g" with the "i" tile glowing yellow, and a small cartoon pig mascot in the corner pointing at the tiles. Rendered in a clean flat UI illustration style with soft studio lighting. The composition is a straight-on portrait phone frame. Color palette emphasizes white, black line art, crayon yellow, and sky blue. The mood is friendly and uncluttered.</pre>
+</section>
+
+<footer>Plan by David Berkowitz, with research from Anthropic Claude and images from Google Gemini Nano Banana. October 17, 2026.</footer>
+</main>
