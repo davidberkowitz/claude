@@ -67,6 +67,8 @@ canvas{display:block;width:100%;max-width:100%;border-radius:6px;background:var(
 .num .v.true{color:var(--true)}
 .num .v.err{color:var(--warn)}
 .num .v.good{color:var(--good)}
+.zoomlbl{font-family:var(--mono);font-size:.9rem;min-width:4.5ch;text-align:center;font-variant-numeric:tabular-nums}
+.nrow .lab{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .inspect{font-size:.92rem;color:var(--muted);min-height:2.8em;border-top:1px dashed var(--line);padding-top:8px}
 .inspect b{color:var(--fg);font-family:var(--mono);font-weight:600}
 
@@ -135,8 +137,9 @@ a{color:hsl(var(--slab-h) var(--slab-s) var(--slab-side))}
 
 <section class="stage">
   <div class="panel">
-    <div class="cap"><h2>The stack</h2><small>Drag to rotate · dashed copper line is the true profile</small></div>
+    <div class="cap"><h2>The stack</h2><small>Drag to rotate · scroll or pinch to zoom · dashed copper line is the true profile</small></div>
     <canvas id="c3d" aria-label="Three-dimensional view of the solid sliced into slabs"></canvas>
+    <div class="nrow"><span class="lab">Zoom</span><button id="zoomOut" type="button" aria-label="Zoom out">−</button><span class="zoomlbl" id="zoomLbl">100%</span><button id="zoomIn" type="button" aria-label="Zoom in">+</button><button id="zoomReset" type="button">Reset view</button></div>
   </div>
   <div class="panel">
     <div class="cap"><h2>Readout</h2></div>
@@ -251,7 +254,8 @@ function stack(S,sec,rule,N){
 const CONV_N=[1,2,3,4,6,8,12,16,24,32,48,64,96,128,192,256,384,512,768,1024];
 
 // ---------- state ----------
-const st={solid:'sphere',section:'disk',rule:'mid',N:8,explode:0,yaw:-0.75,pitch:0.42,hi:-1};
+const st={solid:'sphere',section:'disk',rule:'mid',N:8,explode:0,yaw:-0.75,pitch:0.42,zoom:1,hi:-1};
+const VIEW0={yaw:-0.75,pitch:0.42,zoom:1};
 const $=id=>document.getElementById(id);
 const els={solid:$('solid'),section:$('section'),rule:$('rule'),nslider:$('nslider'),nbox:$('nbox'),explode:$('explode'),auto:$('auto'),c3d:$('c3d'),c2d:$('c2d'),cconv:$('cconv')};
 const NMAX=1024;
@@ -279,7 +283,7 @@ function draw3D(res){
   const L=S.b-S.a, mid=(S.a+S.b)/2, ex=st.explode;
   let R=0; for(let k=0;k<=200;k++) R=Math.max(R,S.f(S.a+L*k/200));
   const rho=Math.sqrt(Math.pow(L*(1+ex)/2,2)+Math.pow(R*1.25,2));
-  const scale=0.46*Math.min(w,h)/rho, cx=w/2, cy=h/2;
+  const scale=0.46*Math.min(w,h)/rho*st.zoom, cx=w/2, cy=h/2;
   const cyw=Math.cos(st.yaw),syw=Math.sin(st.yaw),cp=Math.cos(st.pitch),sp=Math.sin(st.pitch);
   const P=p=>{ const x1=p[0]*cyw+p[2]*syw, z1=-p[0]*syw+p[2]*cyw; const y2=p[1]*cp-z1*sp, z2=p[1]*sp+z1*cp; return [cx+scale*x1, cy-scale*y2, z2]; };
   const X=x=>(x-mid)*(1+ex); // exploded, centered axis coordinate
@@ -433,11 +437,21 @@ els.auto.addEventListener('click',()=>{
   els.auto.setAttribute('aria-pressed','true'); els.auto.textContent='Stop';
   timer=setInterval(()=>{ if(st.N>=512){ clearInterval(timer); timer=null; els.auto.setAttribute('aria-pressed','false'); els.auto.textContent='Slice finer, automatically'; return; } setN(st.N*2,false); },750);
 });
-// rotate
-let drag=null;
-els.c3d.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,yaw:st.yaw,pitch:st.pitch}; els.c3d.setPointerCapture(e.pointerId); });
-els.c3d.addEventListener('pointermove',e=>{ if(!drag) return; st.yaw=drag.yaw+(e.clientX-drag.x)*0.008; st.pitch=Math.max(-1.4,Math.min(1.4,drag.pitch+(e.clientY-drag.y)*0.008)); draw3D(stack(SOLIDS[st.solid],SECTIONS[st.section],st.rule,st.N)); });
-const endDrag=()=>{drag=null;};
+// rotate + zoom (drag, wheel, pinch, buttons)
+function redraw3D(){ draw3D(stack(SOLIDS[st.solid],SECTIONS[st.section],st.rule,st.N)); }
+function setZoom(z){ st.zoom=Math.max(0.4,Math.min(6,z)); $('zoomLbl').textContent=Math.round(st.zoom*100)+'%'; redraw3D(); }
+let drag=null, pinch=null; const ptrs=new Map();
+els.c3d.addEventListener('pointerdown',e=>{ els.c3d.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+  if(ptrs.size===1){ drag={x:e.clientX,y:e.clientY,yaw:st.yaw,pitch:st.pitch}; pinch=null; }
+  else if(ptrs.size===2){ drag=null; const [a,b]=[...ptrs.values()]; pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),zoom:st.zoom}; } });
+els.c3d.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+  if(pinch&&ptrs.size===2){ const [a,b]=[...ptrs.values()]; const d=Math.hypot(a[0]-b[0],a[1]-b[1]); if(pinch.d>0) setZoom(pinch.zoom*d/pinch.d); return; }
+  if(!drag) return; st.yaw=drag.yaw+(e.clientX-drag.x)*0.008; st.pitch=Math.max(-1.4,Math.min(1.4,drag.pitch+(e.clientY-drag.y)*0.008)); redraw3D(); });
+const endDrag=e=>{ ptrs.delete(e.pointerId); drag=null; pinch=null; };
+els.c3d.addEventListener('wheel',e=>{ e.preventDefault(); setZoom(st.zoom*Math.exp(-e.deltaY*0.0015)); },{passive:false});
+$('zoomIn').addEventListener('click',()=>setZoom(st.zoom*1.25));
+$('zoomOut').addEventListener('click',()=>setZoom(st.zoom/1.25));
+$('zoomReset').addEventListener('click',()=>{ st.yaw=VIEW0.yaw; st.pitch=VIEW0.pitch; setZoom(VIEW0.zoom); });
 els.c3d.addEventListener('pointerup',endDrag); els.c3d.addEventListener('pointercancel',endDrag);
 // inspect
 function pickSlab(e){ const rect=els.c2d.getBoundingClientRect(); const x=e.clientX-rect.left; const t=(x-plot2.px)/plot2.pw; if(t<0||t>1) return -1; return Math.min(st.N-1,Math.floor(t*st.N)); }
@@ -454,7 +468,7 @@ new MutationObserver(()=>{convDirty=true; render();}).observe(document.documentE
 // ---------- boot (hot-reload aware) ----------
 function start(data){
   if(data&&data.st) Object.assign(st,data.st);
-  els.solid.value=st.solid; els.section.value=st.section; els.rule.value=st.rule; els.nbox.value=st.N; els.nslider.value=nToSlider(st.N); els.explode.value=Math.round(st.explode/1.2*100);
+  els.solid.value=st.solid; els.section.value=st.section; els.rule.value=st.rule; els.nbox.value=st.N; els.nslider.value=nToSlider(st.N); els.explode.value=Math.round(st.explode/1.2*100); $('zoomLbl').textContent=Math.round(st.zoom*100)+'%';
   convDirty=true; render();
 }
 if(window.claude&&window.claude.hot&&window.claude.hot.snapshot) window.claude.hot.snapshot(()=>({st}));
