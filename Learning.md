@@ -82,3 +82,17 @@ Lesson: when one door is locked, check whether a connector already in the room g
 Two words from you changed nine rows of the plan. That is the point of asking open questions early: "product" pulls in COPPA, store categories, monetization and a parent account, none of which a one-kid prototype needs. "Mobile and web" settles the stack (one web codebase wrapped for the stores) and forces scene density to scale with screen width.
 
 Lesson: the cheapest design decisions are the ones made before anything is built. Ask the two or three questions whose answers fan out the widest, and ask them first.
+
+## Addendum: the prototype
+
+**Approach.** One HTML file, no framework, no build step. Twenty doodles are hand-written SVG paths in a 100-unit box, laid on a 4 by 5 grid with a little jitter so it looks drawn, not placed. Each object is a config entry, so a new scene is a new list, not new code.
+
+**Roads not taken.** Drag-to-blend was the plan. I shipped tap-in-order instead: a four-year-old's drag on a phone is unreliable, and the plan already named tap as the fallback. Recorded audio was out of reach in a sandbox, so the browser's own voice stands in. It says whole words fine and isolated sounds badly ("ih" is a coin flip). That is the single biggest gap between this proto and the product.
+
+**What connects to what.** The hint ladder, decoy message, press-and-hold sound lens, and parent stats all hang off one round object. If you add a scene, none of them change.
+
+**Mistakes.** My first headless test failed twice for reasons that were not bugs: the test page lacked the artifact's hidden-element reset, and the pulsing tile never looked "stable" to the test tool. Lesson: when a test fails, first ask whether the test or the thing is wrong. I fixed the first by adding the reset to the page anyway, which is the right call for a file that may be opened outside the artifact viewer.
+
+**What an expert sees.** The parental gate is a two-second hold, not a math question. Store reviewers accept both; a hold is faster to build and harder for a kid to stumble through by accident. Also: no fail state anywhere. A wrong tap names the object and replays both words. That is the lesson, not a penalty.
+
+**Next.** Record a human voice for 12 words and 9 phonemes, test with three kids, then scene 2.

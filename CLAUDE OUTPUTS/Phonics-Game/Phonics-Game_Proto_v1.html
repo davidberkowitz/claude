@@ -1,0 +1,337 @@
+<title>Pip's Short-i Island Proto</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@400;700&display=swap">
+<style>
+/* Layout: one screen. Pip's speech bubble on top, the doodle scene in the middle, letter tiles below, sticker strip at the bottom. Single paper-white look by choice. */
+:root{
+  --paper:#fffdf7; --ink:#24232b; --pencil:#7a7786; --rule:#e2ddd0;
+  --crayon:#2a63c9; --marker:#f6d44a; --pink:#ef6f93; --green:#3aa86b; --orange:#f28c3b;
+  --display:"Fredoka","Arial Rounded MT Bold",system-ui,sans-serif;
+  --body:"Nunito","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px;
+  display:flex;flex-direction:column;gap:8px;box-sizing:border-box;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{font-family:var(--display);font-size:1rem;border:0;cursor:pointer}
+button:focus-visible,.obj:focus-visible{outline:3px solid var(--crayon);outline-offset:2px}
+.top{display:flex;align-items:center;gap:10px;min-height:76px}
+.pip{width:64px;height:64px;flex:0 0 64px}
+.bubble{flex:1;min-width:0;background:#fff;border:3px solid var(--ink);border-radius:18px;padding:8px 12px;font-family:var(--display);font-size:1.05rem;line-height:1.25;position:relative;min-height:52px;display:flex;align-items:center}
+.bubble::before{content:"";position:absolute;left:-12px;top:22px;border:8px solid transparent;border-right-color:var(--ink)}
+.bubble::after{content:"";position:absolute;left:-7px;top:24px;border:6px solid transparent;border-right-color:#fff}
+.bubble b{color:var(--crayon)}
+.hud{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:.85rem;color:var(--pencil)}
+.hud .scene{font-family:var(--display);font-weight:600;color:var(--ink)}
+.hud button{background:transparent;color:var(--pencil);font-size:.8rem;padding:6px 8px;border-radius:8px;border:1.5px solid var(--rule)}
+.stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+svg.scene{width:100%;height:100%;max-height:100%;aspect-ratio:1;display:block;border:3px solid var(--ink);border-radius:12px;background:#fff}
+.obj{cursor:pointer}
+.obj .line{fill:none;stroke:var(--ink);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.obj .fill{fill:#fff;stroke:var(--ink);stroke-width:3;stroke-linejoin:round;transition:fill .5s}
+.obj.found .fill{fill:var(--c)}
+.obj.found{animation:pop .5s ease-out}
+.obj.wiggle{animation:wiggle .7s ease-in-out}
+.obj.dim{opacity:.28;transition:opacity .6s}
+.hit{fill:transparent;stroke:none}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+.obj{transform-box:fill-box;transform-origin:center}
+.tiles{display:flex;justify-content:center;align-items:center;gap:10px;min-height:76px}
+.tile{width:66px;height:66px;border-radius:16px;background:#fff;border:3px solid var(--ink);font-family:var(--display);font-size:2rem;font-weight:700;color:var(--ink);display:grid;place-items:center;transition:transform .35s,background .3s,margin .35s}
+.tile.next{background:var(--marker);animation:glow 1.2s infinite}
+.tile.done{background:#e3ecfb;border-color:var(--crayon)}
+.tile.i{color:var(--crayon)}
+.tiles.merged .tile{margin:0 -6px;border-radius:10px}
+.tiles.merged .tile:first-child{border-radius:16px 10px 10px 16px}
+.tiles.merged .tile:last-child{border-radius:10px 16px 16px 10px}
+@keyframes glow{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.stickers{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.slot{width:44px;height:44px;border:2px dashed var(--rule);border-radius:10px;display:grid;place-items:center;font-family:var(--display);font-size:.72rem;color:var(--pencil)}
+.slot.got{border:2px solid var(--ink);background:var(--c);color:var(--ink);font-weight:700}
+.overlay{position:fixed;inset:0;background:rgba(255,253,247,.96);display:grid;place-items:center;padding:24px;z-index:20;text-align:center}
+.overlay h1{font-family:var(--display);font-size:2.4rem;margin:0 0 6px;line-height:1.1;text-wrap:balance}
+.overlay p{margin:0 0 18px;color:var(--pencil);max-width:34ch}
+.big{background:var(--crayon);color:#fff;font-size:1.3rem;padding:14px 28px;border-radius:999px;font-weight:700}
+.panel{background:#fff;border:3px solid var(--ink);border-radius:16px;padding:18px;max-width:420px;width:100%;text-align:left}
+.panel h2{font-family:var(--display);margin:0 0 8px}
+.panel table{width:100%;border-collapse:collapse;font-size:.95rem;font-variant-numeric:tabular-nums}
+.panel td,.panel th{padding:6px 4px;border-bottom:1px solid var(--rule);text-align:left}
+.panel .row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.panel button{padding:8px 14px;border-radius:10px;background:var(--rule)}
+.panel button.warn{background:#fde3e3}
+.hold{background:var(--marker);padding:12px 20px;border-radius:999px;font-size:1rem}
+.hold .bar{display:block;height:4px;background:var(--ink);width:0;border-radius:2px;margin-top:6px;transition:width .1s linear}
+canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:15;width:100%;height:100%}
+@media (prefers-reduced-motion:reduce){.obj.found,.obj.wiggle,.tile.next{animation:none}}
+@media (max-width:380px){.tile{width:58px;height:58px;font-size:1.7rem}.bubble{font-size:.95rem}}
+</style>
+
+<div class="top">
+  <svg class="pip" viewBox="0 0 64 64" aria-hidden="true">
+    <ellipse cx="32" cy="34" rx="22" ry="20" fill="#f9c8d3" stroke="#24232b" stroke-width="3"/>
+    <path d="M14 22 L10 8 L24 16 Z M50 22 L54 8 L40 16 Z" fill="#f9c8d3" stroke="#24232b" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="32" cy="40" rx="9" ry="6.5" fill="#f3a6b8" stroke="#24232b" stroke-width="3"/>
+    <circle cx="29" cy="40" r="1.6" fill="#24232b"/><circle cx="35" cy="40" r="1.6" fill="#24232b"/>
+    <circle cx="24" cy="30" r="2.2" fill="#24232b"/><circle cx="40" cy="30" r="2.2" fill="#24232b"/>
+    <path d="M22 48 Q32 54 42 48" fill="none" stroke="#24232b" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+  <div class="bubble" id="bubble" aria-live="polite">Hi! I'm Pip.</div>
+</div>
+
+<div class="hud">
+  <span class="scene">Scene 1 · Pip's room</span>
+  <span id="progress">0 of 3 found</span>
+  <button id="grownups" type="button">Grown-ups</button>
+</div>
+
+<div class="stage">
+  <svg class="scene" id="scene" viewBox="0 0 600 600" role="group" aria-label="Pip's room, a hidden picture scene"></svg>
+</div>
+
+<div class="tiles" id="tiles"></div>
+<div class="stickers" id="stickers"></div>
+
+<div class="overlay" id="start">
+  <div>
+    <h1>Pip's Short-i Island</h1>
+    <p>Pip woke up and his things are gone! Sound out each word, then find it in the room. Sound on.</p>
+    <button class="big" id="play" type="button">Tap to play</button>
+  </div>
+</div>
+
+<div class="overlay" id="done" hidden>
+  <div>
+    <h1>Scene 1 done!</h1>
+    <p>Pip has his wig, his lid, and his bin. The garden is next.</p>
+    <button class="big" id="again" type="button">Play again</button>
+    <p style="margin-top:14px;font-size:.85rem">Scene 2 · The garden · coming soon</p>
+  </div>
+</div>
+
+<div class="overlay" id="gate" hidden>
+  <div>
+    <p>For grown-ups. Hold the button for two seconds.</p>
+    <button class="hold" id="holdbtn" type="button">Hold to open<span class="bar" id="holdbar"></span></button>
+    <p style="margin-top:14px"><button type="button" id="gateclose" style="background:transparent;color:var(--pencil)">Back to Pip</button></p>
+  </div>
+</div>
+
+<div class="overlay" id="parent" hidden>
+  <div class="panel">
+    <h2>How it's going</h2>
+    <table id="stats"></table>
+    <p style="font-size:.85rem;color:var(--pencil);margin:10px 0 0">First try means the right doodle was tapped before any wrong one. Hints count wiggles and dims.</p>
+    <div class="row">
+      <button type="button" id="reset" class="warn">Reset progress</button>
+      <button type="button" id="parentclose">Close</button>
+    </div>
+  </div>
+</div>
+
+<canvas class="confetti" id="confetti" hidden></canvas>
+
+<script>
+(function(){
+'use strict';
+// ---------- doodles: each draws in a 0..100 box. Shapes with class "fill" get crayon color when found.
+const D = {
+  wig:  '<path class="fill" d="M20 60 Q10 40 25 28 Q30 12 50 14 Q72 12 76 30 Q90 42 80 60 Q86 72 74 78 Q66 70 62 78 Q52 70 46 80 Q40 70 34 80 Q26 72 20 60 Z"/><path class="line" d="M38 30 Q40 44 34 52 M50 26 Q52 44 48 54 M62 30 Q60 44 66 52"/>',
+  lid:  '<rect class="line" x="28" y="38" width="44" height="50" rx="8"/><rect class="fill" x="22" y="24" width="56" height="16" rx="5"/><path class="line" d="M34 50 H66 M34 62 H66 M34 74 H56"/>',
+  bin:  '<path class="fill" d="M24 32 L30 90 H70 L76 32 Z"/><rect class="fill" x="18" y="22" width="64" height="10" rx="4"/><path class="line" d="M40 44 L42 78 M50 44 V78 M60 44 L58 78 M44 22 L46 12 H54 L56 22"/>',
+  kite: '<path class="fill" d="M50 8 L82 44 L50 76 L18 44 Z"/><path class="line" d="M50 8 V76 M18 44 H82 M50 76 Q40 84 46 92 Q38 98 44 100"/>',
+  fish: '<path class="fill" d="M20 50 Q40 22 68 50 Q40 78 20 50 Z"/><path class="fill" d="M66 50 L88 32 V68 Z"/><circle class="line" cx="34" cy="46" r="3"/><path class="line" d="M44 38 Q52 50 44 62"/>',
+  ship: '<path class="fill" d="M14 66 H86 L74 90 H26 Z"/><path class="line" d="M50 66 V20"/><path class="fill" d="M50 22 L80 56 H50 Z"/><path class="line" d="M20 96 Q35 88 50 96 Q65 104 80 96"/>',
+  key:  '<circle class="fill" cx="32" cy="36" r="18"/><circle class="line" cx="32" cy="36" r="6"/><path class="line" d="M48 44 L86 80 M74 68 L66 76 M82 76 L74 84"/>',
+  clock:'<circle class="fill" cx="50" cy="50" r="36"/><path class="line" d="M50 24 V50 L68 60 M50 14 V8 M28 86 L22 94 M72 86 L78 94"/>',
+  sock: '<path class="fill" d="M34 10 H66 V52 Q66 66 54 72 L40 80 Q22 88 18 74 Q16 62 30 58 L34 52 Z"/><path class="line" d="M34 20 H66 M34 28 H66"/>',
+  book: '<path class="fill" d="M18 18 H74 L82 26 V88 H26 L18 80 Z"/><path class="line" d="M26 26 H74 V88 M34 40 H66 M34 52 H66 M34 64 H56"/>',
+  ladder:'<path class="line" d="M28 6 V96 M72 6 V96 M28 22 H72 M28 40 H72 M28 58 H72 M28 76 H72"/><rect class="fill" x="24" y="2" width="8" height="8" rx="2"/><rect class="fill" x="68" y="2" width="8" height="8" rx="2"/>',
+  lamp: '<path class="fill" d="M22 48 L36 12 H64 L78 48 Z"/><path class="line" d="M50 48 V84 M30 92 H70 M44 84 H56"/>',
+  bear: '<circle class="fill" cx="28" cy="30" r="10"/><circle class="fill" cx="72" cy="30" r="10"/><circle class="fill" cx="50" cy="52" r="30"/><circle class="line" cx="40" cy="46" r="2.5"/><circle class="line" cx="60" cy="46" r="2.5"/><ellipse class="line" cx="50" cy="60" rx="8" ry="5"/>',
+  cloud:'<path class="fill" d="M24 70 Q8 70 10 56 Q12 42 28 44 Q32 26 52 28 Q70 24 76 42 Q94 42 92 58 Q92 72 76 70 Z"/>',
+  star: '<path class="fill" d="M50 8 L61 38 L94 38 L67 56 L77 88 L50 70 L23 88 L33 56 L6 38 L39 38 Z"/>',
+  apple:'<path class="fill" d="M50 30 Q24 16 18 44 Q14 72 36 90 Q50 96 64 90 Q86 72 82 44 Q76 16 50 30 Z"/><path class="line" d="M50 30 Q52 18 56 12 M52 24 Q64 14 74 20 Q66 32 52 24"/>',
+  cup:  '<path class="fill" d="M26 30 H70 L66 86 H30 Z"/><path class="line" d="M70 40 Q90 40 88 58 Q86 72 66 72 M26 30 Q48 38 70 30"/>',
+  hat:  '<path class="fill" d="M30 60 L36 18 H64 L70 60 Z"/><rect class="fill" x="10" y="60" width="80" height="12" rx="6"/><path class="line" d="M36 50 H64"/>',
+  ball: '<circle class="fill" cx="50" cy="50" r="36"/><path class="line" d="M22 32 Q50 50 22 68 M78 32 Q50 50 78 68"/>',
+  bun:  '<path class="fill" d="M14 60 Q14 22 50 22 Q86 22 86 60 Z"/><path class="line" d="M14 60 H86 M34 40 L38 44 M50 34 L54 38 M64 42 L68 46"/>'
+};
+const NAMES = {wig:'wig',lid:'lid',bin:'bin',kite:'kite',fish:'fish',ship:'ship',key:'key',clock:'clock',sock:'sock',book:'book',ladder:'ladder',lamp:'lamp',bear:'bear',cloud:'cloud',star:'star',apple:'apple',cup:'cup',hat:'hat',ball:'ball',bun:'bun'};
+const SCENE = {
+  targets:[
+    {w:'wig',c:'#f6d44a',lost:'Pip lost his <b>wig</b>!',rhyme:'Pip found his wig. Now he feels big!'},
+    {w:'lid',c:'#8fc3ff',lost:'The jar has no <b>lid</b>!',rhyme:'Pip found the lid. Good job, kid!'},
+    {w:'bin',c:'#9ee2b4',lost:'Where is the <b>bin</b>?',rhyme:'Pip found the bin. Look at him grin!'}
+  ],
+  // 4 columns x 5 rows, jittered
+  layout:['kite','wig','clock','ship', 'fish','book','bun','lamp', 'key','bin','bear','sock', 'star','cup','lid','hat', 'cloud','ladder','apple','ball']
+};
+const SOUND = {p:'puh',i:'ih',g:'guh',w:'wuh',l:'lll',d:'duh',b:'buh',n:'nnn',t:'tuh',s:'sss',h:'huh'};
+const ALL12 = ['wig','lid','bin','dig','pin','pig','dip','sit','win','hit','tin','lip'];
+
+// ---------- state
+const KEY='pip.proto.v1';
+let state = {found:[], stats:{}};
+try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s&&Array.isArray(s.found)) state=s; }catch(e){}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+let round=null; // {t, tileIdx, wrong, hintT1, hintT2}
+let holdTimer=null;
+
+// ---------- audio (prototype uses the browser voice; the product records a human voice)
+const synth = window.speechSynthesis;
+let voice=null;
+function pickVoice(){ if(!synth) return; const vs=synth.getVoices(); voice = vs.find(v=>/en[-_]US/i.test(v.lang)&&/female|samantha|zira|aria/i.test(v.name)) || vs.find(v=>/en[-_]US/i.test(v.lang)) || vs[0] || null; }
+if(synth){ pickVoice(); synth.onvoiceschanged=pickVoice; }
+function say(text, rate){
+  if(!synth) return;
+  try{ synth.cancel(); const u=new SpeechSynthesisUtterance(text); u.rate=rate||0.85; u.pitch=1.15; if(voice) u.voice=voice; synth.speak(u);}catch(e){}
+}
+function bubble(html, speech){ const b=document.getElementById('bubble'); b.innerHTML=html; if(speech!==null) say(speech ?? b.textContent); }
+
+// ---------- build scene
+const svg=document.getElementById('scene');
+const cols=[20,170,320,470], rows=[12,130,248,366,484];
+function seeded(n){ return ((n*9301+49297)%233280)/233280; }
+function build(){
+  svg.innerHTML='';
+  SCENE.layout.forEach((name,i)=>{
+    const x=cols[i%4]+Math.round(seeded(i)*14-7), y=rows[Math.floor(i/4)]+Math.round(seeded(i+7)*12-6);
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','obj'); g.dataset.name=name; g.setAttribute('tabindex','0'); g.setAttribute('role','button'); g.setAttribute('aria-label',NAMES[name]);
+    g.setAttribute('transform',`translate(${x},${y}) scale(1.05)`);
+    const t=SCENE.targets.find(t=>t.w===name); if(t) g.style.setProperty('--c',t.c);
+    g.innerHTML='<rect class="hit" x="-6" y="-6" width="112" height="112" rx="12"/>'+D[name];
+    if(state.found.includes(name)) g.classList.add('found');
+    g.addEventListener('pointerdown',onDown); g.addEventListener('pointerup',onUp); g.addEventListener('pointercancel',onCancel); g.addEventListener('pointerleave',onCancel);
+    g.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); tap(g); } });
+    svg.appendChild(g);
+  });
+}
+// press-and-hold any doodle to hear its name (the "sound lens"); a short tap is an answer
+let pressT=null, pressed=null, longFired=false;
+function onDown(e){ pressed=e.currentTarget; longFired=false; pressT=setTimeout(()=>{ longFired=true; bubble(`That's a <b>${NAMES[pressed.dataset.name]}</b>.`, NAMES[pressed.dataset.name]); },450); }
+function onUp(e){ clearTimeout(pressT); if(pressed===e.currentTarget && !longFired) tap(e.currentTarget); pressed=null; }
+function onCancel(){ clearTimeout(pressT); pressed=null; }
+
+// ---------- rounds
+function nextTarget(){ return SCENE.targets.find(t=>!state.found.includes(t.w)); }
+function startRound(){
+  clearHints();
+  const t=nextTarget();
+  document.getElementById('progress').textContent=`${state.found.length} of 3 found`;
+  renderStickers();
+  if(!t){ finish(); return; }
+  round={t, tileIdx:0, wrong:0, hints:0, searching:false};
+  state.stats[t.w] = state.stats[t.w] || {tries:0, hints:0, firstTry:null};
+  bubble(`${t.lost} Let's sound it out. Tap the letters.`, `Pip lost his ${t.w}! Let's sound it out. Tap the letters.`);
+  renderTiles();
+  svg.querySelectorAll('.obj').forEach(o=>o.classList.remove('dim','wiggle'));
+}
+function renderTiles(){
+  const box=document.getElementById('tiles'); box.innerHTML=''; box.classList.remove('merged');
+  if(!round) return;
+  [...round.t.w].forEach((ch,i)=>{
+    const b=document.createElement('button'); b.type='button'; b.className='tile'+(ch==='i'?' i':'')+(i<round.tileIdx?' done':'')+(i===round.tileIdx?' next':''); b.textContent=ch; b.id='tile'+i;
+    b.setAttribute('aria-label',`letter ${ch}`);
+    b.addEventListener('click',()=>tapTile(i,ch));
+    box.appendChild(b);
+  });
+}
+function tapTile(i,ch){
+  if(!round || round.searching) return;
+  if(i!==round.tileIdx){ say(SOUND[ch]||ch); return; }
+  say(SOUND[ch]||ch); round.tileIdx++; renderTiles();
+  if(round.tileIdx===round.t.w.length){
+    setTimeout(()=>{
+      document.getElementById('tiles').classList.add('merged');
+      document.querySelectorAll('.tile').forEach(t=>t.classList.add('done'));
+      bubble(`<b>${round.t.w}</b>! Now find the ${round.t.w}.`, `${round.t.w}! Now find the ${round.t.w}.`);
+      round.searching=true; armHints();
+    },450);
+  }
+}
+function tap(g){
+  if(!round || !round.searching || g.classList.contains('found')) return;
+  const name=g.dataset.name, st=state.stats[round.t.w];
+  st.tries++;
+  if(name===round.t.w){
+    if(st.firstTry===null) st.firstTry = (round.wrong===0);
+    clearHints();
+    g.classList.add('found'); state.found.push(name); save();
+    bubble(round.t.rhyme.replace(round.t.w,`<b>${round.t.w}</b>`), round.t.rhyme);
+    round.searching=false;
+    setTimeout(startRound, 2600);
+  }else{
+    round.wrong++;
+    g.classList.remove('wiggle'); void g.getBoundingClientRect(); g.classList.add('wiggle');
+    bubble(`That's a <b>${NAMES[name]}</b>. We need the <b>${round.t.w}</b>. Listen: ${NAMES[name]}, ${round.t.w}.`, `That's a ${NAMES[name]}. We need the ${round.t.w}. ${NAMES[name]}. ${round.t.w}.`);
+  }
+}
+// hint ladder: 12 s wiggle, 25 s dim the rest
+let h1=null,h2=null;
+function armHints(){
+  clearHints();
+  h1=setTimeout(()=>{ const g=target(); if(g){ g.classList.add('wiggle'); state.stats[round.t.w].hints++; save(); } },12000);
+  h2=setTimeout(()=>{ svg.querySelectorAll('.obj').forEach(o=>{ if(o.dataset.name!==round.t.w && !o.classList.contains('found')) o.classList.add('dim'); }); state.stats[round.t.w].hints++; save(); },25000);
+}
+function clearHints(){ clearTimeout(h1); clearTimeout(h2); svg.querySelectorAll('.obj').forEach(o=>o.classList.remove('dim')); }
+function target(){ return round && svg.querySelector(`.obj[data-name="${round.t.w}"]`); }
+
+// ---------- stickers
+function renderStickers(){
+  const box=document.getElementById('stickers'); box.innerHTML='';
+  ALL12.forEach(w=>{
+    const s=document.createElement('div'); s.className='slot'; const t=SCENE.targets.find(t=>t.w===w);
+    if(state.found.includes(w)){ s.classList.add('got'); s.style.setProperty('--c',t.c); s.textContent=w; s.title='Tap to hear it again'; s.addEventListener('click',()=>{ bubble(`<b>${w}</b>`, w); }); }
+    else s.textContent='·';
+    box.appendChild(s);
+  });
+}
+
+// ---------- finish + confetti
+function finish(){
+  round=null; document.getElementById('tiles').innerHTML='';
+  bubble('We did it! Scene 1 is all colored in.');
+  confetti(); setTimeout(()=>{ document.getElementById('done').hidden=false; },1800);
+}
+function confetti(){
+  const c=document.getElementById('confetti'); if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  c.hidden=false; c.width=innerWidth; c.height=innerHeight; const ctx=c.getContext('2d');
+  const cols=['#f6d44a','#8fc3ff','#9ee2b4','#ef6f93','#f28c3b'];
+  const ps=Array.from({length:120},()=>({x:Math.random()*c.width,y:-20-Math.random()*200,v:2+Math.random()*3,r:Math.random()*6.28,s:6+Math.random()*6,col:cols[Math.floor(Math.random()*5)]}));
+  let t0=performance.now();
+  (function frame(now){ ctx.clearRect(0,0,c.width,c.height); ps.forEach(p=>{p.y+=p.v;p.r+=.05;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.col;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();});
+    if(now-t0<2600) requestAnimationFrame(frame); else { ctx.clearRect(0,0,c.width,c.height); c.hidden=true; } })(t0);
+}
+
+// ---------- grown-ups gate (hold two seconds)
+const gate=document.getElementById('gate'), parent=document.getElementById('parent'), holdbtn=document.getElementById('holdbtn'), bar=document.getElementById('holdbar');
+document.getElementById('grownups').addEventListener('click',()=>{ gate.hidden=false; });
+document.getElementById('gateclose').addEventListener('click',()=>{ gate.hidden=true; });
+let holdStart=0, holdRaf=null;
+function holdTick(){ const p=Math.min(1,(performance.now()-holdStart)/2000); bar.style.width=(p*100)+'%'; if(p>=1){ gate.hidden=true; bar.style.width='0'; openParent(); } else holdRaf=requestAnimationFrame(holdTick); }
+function holdBegin(e){ e.preventDefault(); holdStart=performance.now(); holdRaf=requestAnimationFrame(holdTick); }
+function holdEnd(){ cancelAnimationFrame(holdRaf); bar.style.width='0'; }
+holdbtn.addEventListener('pointerdown',holdBegin); holdbtn.addEventListener('pointerup',holdEnd); holdbtn.addEventListener('pointerleave',holdEnd); holdbtn.addEventListener('pointercancel',holdEnd);
+function openParent(){
+  const tb=document.getElementById('stats');
+  let rows='<tr><th>Word</th><th>Found</th><th>First try</th><th>Hints</th></tr>';
+  SCENE.targets.forEach(t=>{ const s=state.stats[t.w]; rows+=`<tr><td>${t.w}</td><td>${state.found.includes(t.w)?'yes':'not yet'}</td><td>${s&&s.firstTry!==null?(s.firstTry?'yes':'no'):'–'}</td><td>${s?s.hints:0}</td></tr>`; });
+  tb.innerHTML=rows; parent.hidden=false;
+}
+document.getElementById('parentclose').addEventListener('click',()=>{ parent.hidden=true; });
+document.getElementById('reset').addEventListener('click',()=>{ state={found:[],stats:{}}; save(); parent.hidden=true; document.getElementById('done').hidden=true; build(); startRound(); });
+
+// ---------- boot
+document.getElementById('play').addEventListener('click',()=>{ document.getElementById('start').hidden=true; say(''); startRound(); });
+document.getElementById('again').addEventListener('click',()=>{ state={found:[],stats:{}}; save(); document.getElementById('done').hidden=true; build(); startRound(); });
+function boot(){ build(); renderStickers(); document.getElementById('progress').textContent=`${state.found.length} of 3 found`; if(state.found.length===3){ document.getElementById('start').querySelector('p').textContent='Scene 1 is finished. Tap to play it again.'; } }
+if(window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(()=>state);
+boot();
+})();
+</script>
