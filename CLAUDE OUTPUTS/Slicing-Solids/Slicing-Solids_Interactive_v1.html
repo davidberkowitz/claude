@@ -1,0 +1,477 @@
+<title>Slab Limit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a workbench. Rotating 3D stack on top, the two flat readouts (rectangles, convergence) under it, notes below. */
+:root{
+  --bg:#e9ecf0; --panel:#ffffff; --panel2:#f3f5f8; --fg:#161b22; --muted:#5a6673; --line:#cfd5dd;
+  --slab-h:208; --slab-s:52%; --slab-side:46%; --slab-face:66%; --slab-edge:hsl(208 40% 28%);
+  --true:#c8641f; --true-soft:rgba(200,100,31,.18);
+  --good:#25794a; --warn:#b2541c;
+  --display:"Fraunces", Georgia, "Times New Roman", serif;
+  --body:"Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  --mono:"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1419; --panel:#171d25; --panel2:#1f262f; --fg:#e7ebf0; --muted:#98a4b1; --line:#2d3640;
+  --slab-h:208; --slab-s:48%; --slab-side:38%; --slab-face:58%; --slab-edge:hsl(208 40% 16%);
+  --true:#ec9452; --true-soft:rgba(236,148,82,.2); --good:#5cc08a; --warn:#e99a5e; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1419; --panel:#171d25; --panel2:#1f262f; --fg:#e7ebf0; --muted:#98a4b1; --line:#2d3640;
+  --slab-h:208; --slab-s:48%; --slab-side:38%; --slab-face:58%; --slab-edge:hsl(208 40% 16%);
+  --true:#ec9452; --true-soft:rgba(236,148,82,.2); --good:#5cc08a; --warn:#e99a5e; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:500;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.01em}
+h2{font-size:1.45rem}
+h3{font-size:1.1rem;font-weight:700;font-family:var(--body)}
+p{margin:0;max-width:68ch}
+.lede{font-size:1.1rem;color:var(--muted);max-width:60ch}
+header{display:grid;gap:10px}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+.controls{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.ctl{display:grid;gap:5px;min-width:0}
+.ctl label,.ctl .lab{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+select,input[type=number],button{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 9px;min-width:0}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid hsl(var(--slab-h) var(--slab-s) 50%);outline-offset:2px}
+button{cursor:pointer}
+button.primary{background:hsl(var(--slab-h) var(--slab-s) var(--slab-side));color:#fff;border-color:transparent;font-weight:700}
+button[aria-pressed="true"]{background:var(--true);color:#fff;border-color:transparent}
+input[type=range]{width:100%;accent-color:hsl(var(--slab-h) var(--slab-s) var(--slab-side))}
+.nrow{display:flex;gap:6px;align-items:center}
+.nrow input[type=number]{width:5.5em;font-family:var(--mono)}
+.ctl.wide{grid-column:1/-1}
+@media (min-width:720px){.ctl.wide{grid-column:span 2}}
+
+.stage{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.stage{grid-template-columns:minmax(0,2fr) minmax(260px,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;min-width:0}
+.panel .cap{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.panel .cap small{color:var(--muted)}
+canvas{display:block;width:100%;max-width:100%;border-radius:6px;background:var(--panel2);touch-action:none}
+#c3d{aspect-ratio:3/2;cursor:grab}
+#c3d:active{cursor:grabbing}
+#c2d,#cconv{aspect-ratio:16/10}
+
+.nums{display:grid;gap:8px;font-variant-numeric:tabular-nums}
+.num{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:6px}
+.num:last-child{border-bottom:0}
+.num .k{color:var(--muted);font-size:.9rem}
+.num .v{font-family:var(--mono);font-size:1.02rem;text-align:right}
+.num .v.big{font-size:1.5rem;font-weight:600}
+.num .v.true{color:var(--true)}
+.num .v.err{color:var(--warn)}
+.num .v.good{color:var(--good)}
+.zoomlbl{font-family:var(--mono);font-size:.9rem;min-width:4.5ch;text-align:center;font-variant-numeric:tabular-nums}
+.nrow .lab{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.inspect{font-size:.92rem;color:var(--muted);min-height:2.8em;border-top:1px dashed var(--line);padding-top:8px}
+.inspect b{color:var(--fg);font-family:var(--mono);font-weight:600}
+
+.two{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.two{grid-template-columns:1fr 1fr}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+
+.notes{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.notes{grid-template-columns:1fr 1fr}}
+.note{display:grid;gap:8px;align-content:start}
+.note ul,.note ol{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:68ch}
+.formula{font-family:var(--mono);font-size:.95rem;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:10px 12px;overflow-x:auto;white-space:nowrap}
+kbd{font-family:var(--mono);font-size:.85em;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+a{color:hsl(var(--slab-h) var(--slab-s) var(--slab-side))}
+.foot{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:12px}
+.refs{font-size:.9rem}
+.refs li{margin-bottom:4px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Volume by slicing · an explorer</div>
+  <h1>Slab Limit</h1>
+  <p class="lede">Cut a solid into N slabs, replace each slab with a flat-sided prism, add them up. Watch the stack converge to the exact volume as the slabs get thinner, and see which way of choosing each slab's size converges fastest.</p>
+</header>
+
+<section class="controls" aria-label="Controls">
+  <div class="ctl"><label for="solid">Solid</label>
+    <select id="solid">
+      <option value="sphere">Sphere · y = √(1−x²)</option>
+      <option value="cone">Cone · y = x</option>
+      <option value="cylinder">Cylinder · y = 1</option>
+      <option value="paraboloid">Paraboloid · y = √x</option>
+      <option value="horn">Horn · y = 1/x</option>
+      <option value="vase">Vase · y = 0.7 + 0.3 sin 2x</option>
+      <option value="bell">Bell · y = e^(−x²)</option>
+    </select></div>
+  <div class="ctl"><label for="section">Cross-section shape</label>
+    <select id="section">
+      <option value="disk">Disk (solid of revolution)</option>
+      <option value="square">Square, side 2y</option>
+      <option value="triangle">Equilateral triangle, side 2y</option>
+      <option value="semicircle">Semicircle, radius y</option>
+    </select></div>
+  <div class="ctl"><label for="rule">Slab size taken from</label>
+    <select id="rule">
+      <option value="left">Left edge of each slab</option>
+      <option value="mid" selected>Middle of each slab</option>
+      <option value="right">Right edge of each slab</option>
+      <option value="inner">Smallest radius in slab (inscribed)</option>
+      <option value="outer">Largest radius in slab (circumscribed)</option>
+    </select></div>
+  <div class="ctl wide"><label for="nslider">Number of slabs N</label>
+    <input type="range" id="nslider" min="0" max="1000" value="333">
+    <div class="nrow">
+      <button id="halve" type="button" aria-label="Halve N">÷2</button>
+      <input type="number" id="nbox" min="1" max="1024" value="8" aria-label="N">
+      <button id="double" type="button" aria-label="Double N">×2</button>
+      <button id="auto" type="button" class="primary" aria-pressed="false">Slice finer, automatically</button>
+    </div></div>
+  <div class="ctl"><label for="explode">Pull slabs apart</label>
+    <input type="range" id="explode" min="0" max="100" value="0"></div>
+</section>
+
+<section class="stage">
+  <div class="panel">
+    <div class="cap"><h2>The stack</h2><small>Drag to rotate · scroll or pinch to zoom · dashed copper line is the true profile</small></div>
+    <canvas id="c3d" aria-label="Three-dimensional view of the solid sliced into slabs"></canvas>
+    <div class="nrow"><span class="lab">Zoom</span><button id="zoomOut" type="button" aria-label="Zoom out">−</button><span class="zoomlbl" id="zoomLbl">100%</span><button id="zoomIn" type="button" aria-label="Zoom in">+</button><button id="zoomReset" type="button">Reset view</button></div>
+  </div>
+  <div class="panel">
+    <div class="cap"><h2>Readout</h2></div>
+    <div class="nums">
+      <div class="num"><span class="k">Slabs N</span><span class="v" id="vN">8</span></div>
+      <div class="num"><span class="k">Thickness Δx</span><span class="v" id="vDx"></span></div>
+      <div class="num"><span class="k">Stack volume Σ A(xᵢ)·Δx</span><span class="v big" id="vApprox"></span></div>
+      <div class="num"><span class="k">Exact volume <span id="vFormula"></span></span><span class="v big true" id="vExact"></span></div>
+      <div class="num"><span class="k">Error (stack − exact)</span><span class="v err" id="vErr"></span></div>
+      <div class="num"><span class="k">Relative error</span><span class="v err" id="vRel"></span></div>
+    </div>
+    <div class="inspect" id="inspect">Hover or tap a rectangle below to inspect one slab.</div>
+  </div>
+</section>
+
+<section class="two">
+  <div class="panel">
+    <div class="cap"><h2>Each slab is a rectangle</h2><small>Cross-section area A(x) against x</small></div>
+    <canvas id="c2d" aria-label="Cross-section area function with Riemann rectangles"></canvas>
+    <div class="legend"><span><i style="background:hsl(var(--slab-h) var(--slab-s) var(--slab-face))"></i>Rectangle area = one slab's volume</span><span><i style="background:var(--true)"></i>A(x), area under it = exact volume</span></div>
+  </div>
+  <div class="panel">
+    <div class="cap"><h2>How fast the error shrinks</h2><small>Both axes logarithmic</small></div>
+    <canvas id="cconv" aria-label="Error versus number of slabs on log-log axes, for each sampling rule"></canvas>
+    <div class="legend" id="convLegend"></div>
+  </div>
+</section>
+
+<section class="notes">
+  <div class="note">
+    <h2>What is happening</h2>
+    <p>Every slab is a thin prism: a flat cross-section of area A(xᵢ) extruded by the thickness Δx = (b − a)/N. Its volume is A(xᵢ)·Δx, so the whole stack is a Riemann sum of A(x). The exact volume is the limit of that sum:</p>
+    <div class="formula">V = lim<sub>N→∞</sub> Σ A(xᵢ) Δx = ∫<sub>a</sub><sup>b</sup> A(x) dx,&nbsp; with A(x) = c · f(x)²</div>
+    <p>The constant c depends only on the cross-section's shape: π for a disk, 4 for a square of side 2f, √3 for an equilateral triangle of side 2f, π/2 for a semicircle. Change the shape and every volume scales by c, which is Cavalieri's principle in action: equal-area slices at every height mean equal volumes.</p>
+    <p>The lower chart plots A(x). Each rectangle's area is literally one slab's volume, so the stack volume is the rectangle total and the exact volume is the area under the curve.</p>
+  </div>
+  <div class="note">
+    <h2>Things to try</h2>
+    <ul>
+      <li><b>Cylinder.</b> Exact at N = 1. Slicing only adds work when the cross-section changes along the axis.</li>
+      <li><b>Paraboloid with midpoint slabs.</b> Also exact at every N, because A(x) = πx is linear and the midpoint rectangle matches a linear function perfectly.</li>
+      <li><b>Cone, inscribed versus circumscribed.</b> The two stacks squeeze the answer from both sides. This is the structure of Archimedes' and Eudoxus' exhaustion arguments, two millennia before limits were defined.</li>
+      <li><b>Sphere, square cross-sections.</b> The volume becomes 16/3, no π anywhere, even though the base is a circle.</li>
+      <li><b>Error chart, cone or horn.</b> Edge rules fall like 1/N (slope −1). The midpoint rule falls like 1/N² (slope −2). Doubling N buys one more decimal place with edge slabs, two with midpoint slabs.</li>
+      <li><b>Error chart, sphere or bell.</b> Now the edge rules also fall like 1/N². The solid is symmetric, so the left-edge overshoot on one half cancels the undershoot on the other. Symmetry is free accuracy.</li>
+      <li><b>Vase, any rule, N ≥ 3.</b> Exact to machine precision. A(x) is a sum of sines and cosines over one full period, and equally spaced samples of such a function add up exactly once N exceeds the highest frequency present. The chart drops those points because there is nothing left to plot.</li>
+      <li><b>Horn, N = 1, left edge.</b> One fat slab with volume 3π for a solid of 0.75π. A single sample can be wildly wrong when the function changes fast.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h2>Where the picture misleads</h2>
+    <ul>
+      <li><b>Volume converges; surface area need not.</b> The stack's volume approaches the true volume, but the stack's surface area does not approach the true surface area. The staircase edges never flatten out. That is why arc length and surface area need a different setup (frustums, not cylinders).</li>
+      <li><b>"Thinner and thinner" is not "infinitely many infinitely thin."</b> No single slab ever has zero thickness. The exact volume is a limit, a statement about where the sums are heading, not a sum of zero-volume sheets.</li>
+      <li><b>The 1/N² rate needs smoothness.</b> It relies on A having a bounded second derivative. The sphere's f(x) = √(1−x²) has an infinite slope at the ends, but A = π(1−x²) is a smooth parabola, which is why the sphere still converges cleanly. A solid whose A(x) has a kink or jump converges more slowly.</li>
+      <li><b>Any slicing direction works, but not equally well.</b> Slicing the same solid along a different axis gives a different A(x) and a different error at the same N. The limit is the same; the road there is not.</li>
+      <li><b>Pulling the slabs apart changes nothing numerically.</b> The gap slider only spreads the picture so the pieces are visible. The volumes are identical.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h2>References</h2>
+    <ol class="refs">
+      <li>Stewart, J. <i>Calculus: Early Transcendentals</i>, §6.2 "Volumes" (disk method, solids with known cross-sections).</li>
+      <li>MIT OpenCourseWare 18.01SC, <a href="https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/" rel="noopener">Single Variable Calculus</a>, Unit 3: volumes by disks and shells.</li>
+      <li>Archimedes, <i>The Method of Mechanical Theorems</i>; see the <a href="https://en.wikipedia.org/wiki/The_Method_of_Mechanical_Theorems" rel="noopener">overview</a> of his slicing-and-balancing argument for the sphere.</li>
+      <li><a href="https://en.wikipedia.org/wiki/Cavalieri%27s_principle" rel="noopener">Cavalieri's principle</a> (1635): equal cross-sections at every height imply equal volumes.</li>
+      <li>Burden, R. and Faires, J. <i>Numerical Analysis</i>, ch. 4: error bounds for the midpoint rule, (b−a)³·max|A″|/(24N²), and for endpoint rules, (b−a)²·max|A′|/(2N).</li>
+      <li><a href="https://en.wikipedia.org/wiki/Gabriel%27s_horn" rel="noopener">Gabriel's horn</a>: finite volume, infinite surface area, the extreme case of the first caveat above.</li>
+    </ol>
+  </div>
+</section>
+
+<p class="foot">Built by David Berkowitz with research from Anthropic Claude. All numbers are computed live in the page from the formulas above.</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+const TAU=Math.PI*2;
+// ---------- model ----------
+function simpson(g,a,b,n){ n=n%2?n+1:n; const h=(b-a)/n; let s=g(a)+g(b); for(let i=1;i<n;i++){ s+=g(a+i*h)*(i%2?4:2);} return s*h/3; }
+const SOLIDS={
+  sphere:{f:x=>Math.sqrt(Math.max(0,1-x*x)),a:-1,b:1,I:4/3,Itex:'4/3'},
+  cone:{f:x=>x,a:0,b:1,I:1/3,Itex:'1/3'},
+  cylinder:{f:()=>1,a:0,b:2,I:2,Itex:'2'},
+  paraboloid:{f:x=>Math.sqrt(Math.max(0,x)),a:0,b:1,I:1/2,Itex:'1/2'},
+  horn:{f:x=>1/x,a:1,b:4,I:3/4,Itex:'3/4'},
+  vase:{f:x=>0.7+0.3*Math.sin(2*x),a:0,b:Math.PI,I:Math.PI*(0.49+0.045),Itex:'0.535π'},
+  bell:{f:x=>Math.exp(-x*x),a:-2,b:2,I:simpson(x=>Math.exp(-2*x*x),-2,2,4000),Itex:'√(π/2)·erf(2√2)'}
+};
+function circlePoly(r,n){ const p=[]; for(let k=0;k<n;k++){ const t=k/n*TAU; p.push([r*Math.cos(t),r*Math.sin(t)]);} return p; }
+const SECTIONS={
+  disk:{c:Math.PI,ctex:'π',poly:r=>circlePoly(r,40)},
+  square:{c:4,ctex:'4',poly:r=>[[-r,-r],[r,-r],[r,r],[-r,r]]},
+  triangle:{c:Math.sqrt(3),ctex:'√3',poly:r=>{const h=Math.sqrt(3)*r;return [[-h/3,-r],[-h/3,r],[2*h/3,0]];}},
+  semicircle:{c:Math.PI/2,ctex:'π/2',poly:r=>{const p=[];for(let k=0;k<=24;k++){const t=k/24*Math.PI;p.push([r*Math.sin(t),r*Math.cos(t)]);}return p;}}
+};
+const RULES={left:'Left edge',mid:'Midpoint',right:'Right edge',inner:'Inscribed',outer:'Circumscribed'};
+function sampleR(f,x0,x1,rule){
+  if(rule==='left') return f(x0);
+  if(rule==='right') return f(x1);
+  if(rule==='mid') return f((x0+x1)/2);
+  let m=rule==='inner'?Infinity:-Infinity;
+  for(let k=0;k<=16;k++){ const v=f(x0+(x1-x0)*k/16); m=rule==='inner'?Math.min(m,v):Math.max(m,v); }
+  return m;
+}
+function stack(S,sec,rule,N){
+  const dx=(S.b-S.a)/N, r=new Array(N); let sum=0;
+  for(let i=0;i<N;i++){ const x0=S.a+i*dx; const ri=sampleR(S.f,x0,x0+dx,rule); r[i]=ri; sum+=sec.c*ri*ri*dx; }
+  return {dx,r,sum};
+}
+const CONV_N=[1,2,3,4,6,8,12,16,24,32,48,64,96,128,192,256,384,512,768,1024];
+
+// ---------- state ----------
+const st={solid:'sphere',section:'disk',rule:'mid',N:8,explode:0,yaw:-0.75,pitch:0.42,zoom:1,hi:-1};
+const VIEW0={yaw:-0.75,pitch:0.42,zoom:1};
+const $=id=>document.getElementById(id);
+const els={solid:$('solid'),section:$('section'),rule:$('rule'),nslider:$('nslider'),nbox:$('nbox'),explode:$('explode'),auto:$('auto'),c3d:$('c3d'),c2d:$('c2d'),cconv:$('cconv')};
+const NMAX=1024;
+const sliderToN=t=>Math.max(1,Math.min(NMAX,Math.round(Math.exp(t/1000*Math.log(NMAX)))));
+const nToSlider=n=>Math.round(Math.log(Math.max(1,n))/Math.log(NMAX)*1000);
+
+function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function slabColor(i,face,hi){
+  if(hi) return css('--true');
+  const h=css('--slab-h'), s=css('--slab-s');
+  const l=parseFloat(face?css('--slab-face'):css('--slab-side'))+(i%2?4:0);
+  return `hsl(${h} ${s} ${l}%)`;
+}
+function fmt(v,d){ if(!isFinite(v)) return '—'; return v.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+// ---------- canvas plumbing ----------
+function fit(cv){ const dpr=window.devicePixelRatio||1; const w=cv.clientWidth, h=cv.clientHeight; const W=Math.round(w*dpr),H=Math.round(h*dpr); if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;} const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); return {g,w,h}; }
+function hull(pts){ pts=pts.slice().sort((p,q)=>p[0]-q[0]||p[1]-q[1]); if(pts.length<3) return pts; const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); const lo=[]; for(const p of pts){ while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0) lo.pop(); lo.push(p);} const up=[]; for(let i=pts.length-1;i>=0;i--){ const p=pts[i]; while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0) up.pop(); up.push(p);} up.pop(); lo.pop(); return lo.concat(up); }
+function poly(g,pts){ g.beginPath(); pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.closePath(); }
+
+// ---------- 3D stack ----------
+function draw3D(res){
+  const {g,w,h}=fit(els.c3d); g.clearRect(0,0,w,h);
+  const S=SOLIDS[st.solid], sec=SECTIONS[st.section];
+  const L=S.b-S.a, mid=(S.a+S.b)/2, ex=st.explode;
+  let R=0; for(let k=0;k<=200;k++) R=Math.max(R,S.f(S.a+L*k/200));
+  const rho=Math.sqrt(Math.pow(L*(1+ex)/2,2)+Math.pow(R*1.25,2));
+  const scale=0.46*Math.min(w,h)/rho*st.zoom, cx=w/2, cy=h/2;
+  const cyw=Math.cos(st.yaw),syw=Math.sin(st.yaw),cp=Math.cos(st.pitch),sp=Math.sin(st.pitch);
+  const P=p=>{ const x1=p[0]*cyw+p[2]*syw, z1=-p[0]*syw+p[2]*cyw; const y2=p[1]*cp-z1*sp, z2=p[1]*sp+z1*cp; return [cx+scale*x1, cy-scale*y2, z2]; };
+  const X=x=>(x-mid)*(1+ex); // exploded, centered axis coordinate
+
+  // axis
+  g.strokeStyle=css('--line'); g.lineWidth=1; g.setLineDash([3,4]);
+  let a0=P([X(S.a)-0.15*L,0,0]), a1=P([X(S.b)+0.15*L,0,0]);
+  g.beginPath(); g.moveTo(a0[0],a0[1]); g.lineTo(a1[0],a1[1]); g.stroke(); g.setLineDash([]);
+
+  // slabs, painter's order
+  const N=st.N, dx=res.dx, slabs=[];
+  for(let i=0;i<N;i++){
+    const r=res.r[i]; if(r<1e-9) continue;
+    const x0=S.a+i*dx, xc=x0+dx/2;
+    const X0=X(xc)-dx/2, X1=X(xc)+dx/2;
+    const base=sec.poly(r);
+    const f0=base.map(q=>P([X0,q[0],q[1]])), f1=base.map(q=>P([X1,q[0],q[1]]));
+    const z0=P([X0,0,0])[2], z1=P([X1,0,0])[2];
+    slabs.push({i,f0,f1,z:(z0+z1)/2,near:z1>z0?f1:f0});
+  }
+  slabs.sort((p,q)=>p.z-q.z);
+  const edgeA=N>160?0.18:N>60?0.35:0.7;
+  g.lineJoin='round';
+  for(const s of slabs){
+    const hi=s.i===st.hi;
+    const hp=hull(s.f0.concat(s.f1));
+    poly(g,hp); g.fillStyle=slabColor(s.i,false,hi); g.fill();
+    g.strokeStyle=css('--slab-edge'); g.globalAlpha=edgeA; g.lineWidth=1; g.stroke(); g.globalAlpha=1;
+    poly(g,s.near); g.fillStyle=slabColor(s.i,true,hi); g.fill();
+    g.globalAlpha=edgeA; g.strokeStyle=css('--slab-edge'); g.stroke(); g.globalAlpha=1;
+  }
+  // true profile (meridians)
+  g.strokeStyle=css('--true'); g.lineWidth=1.6; g.setLineDash([5,4]); g.globalAlpha=0.9;
+  const M=160;
+  const curves=[[],[],[],[]];
+  for(let k=0;k<=M;k++){ const x=S.a+L*k/M, y=S.f(x), xx=X(x); curves[0].push(P([xx,y,0])); curves[1].push(P([xx,-y,0])); curves[2].push(P([xx,0,y])); curves[3].push(P([xx,0,-y])); }
+  for(const c of curves){ g.beginPath(); c.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.stroke(); }
+  g.setLineDash([]); g.globalAlpha=1;
+  // axis labels
+  g.fillStyle=css('--muted'); g.font='12px '+css('--mono');
+  const la=P([X(S.a)-0.24*L,0,0]), lb=P([X(S.b)+0.24*L,0,0]);
+  g.textAlign='center'; g.fillText('x = '+fmt(S.a,2),la[0],la[1]+4); g.fillText('x = '+fmt(S.b,2),lb[0],lb[1]+4);
+}
+
+// ---------- 2D rectangles ----------
+let plot2={x0:0,x1:0,px:0,pw:0};
+function draw2D(res){
+  const {g,w,h}=fit(els.c2d); g.clearRect(0,0,w,h);
+  const S=SOLIDS[st.solid], sec=SECTIONS[st.section];
+  const A=x=>sec.c*S.f(x)*S.f(x);
+  const padL=46,padR=12,padT=12,padB=30, pw=w-padL-padR, ph=h-padT-padB;
+  let ymax=0; for(let k=0;k<=200;k++) ymax=Math.max(ymax,A(S.a+(S.b-S.a)*k/200)); for(const r of res.r) ymax=Math.max(ymax,sec.c*r*r);
+  ymax*=1.08;
+  const sx=x=>padL+(x-S.a)/(S.b-S.a)*pw, sy=y=>padT+ph-y/ymax*ph;
+  plot2={x0:S.a,x1:S.b,px:padL,pw};
+  // grid + axes
+  g.strokeStyle=css('--line'); g.lineWidth=1; g.fillStyle=css('--muted'); g.font='11px '+css('--mono');
+  const yt=niceTicks(0,ymax,4);
+  g.textAlign='right'; g.textBaseline='middle';
+  for(const t of yt){ const y=sy(t); g.beginPath(); g.moveTo(padL,y); g.lineTo(w-padR,y); g.stroke(); g.fillText(fmt(t,ymax<2?2:1),padL-6,y); }
+  const xt=niceTicks(S.a,S.b,5); g.textAlign='center'; g.textBaseline='top';
+  for(const t of xt){ const x=sx(t); g.fillText(fmt(t,1),x,padT+ph+6); }
+  g.save(); g.translate(12,padT+ph/2); g.rotate(-Math.PI/2); g.textAlign='center'; g.textBaseline='middle'; g.fillText('A(x)',0,0); g.restore();
+  // rectangles
+  const N=st.N, dx=res.dx;
+  for(let i=0;i<N;i++){
+    const r=res.r[i], a=sec.c*r*r, x0=S.a+i*dx; const hi=i===st.hi;
+    const X0=sx(x0), X1=sx(x0+dx), Y=sy(a), Y0=sy(0);
+    g.fillStyle=hi?css('--true'):slabColor(i,true,false); g.globalAlpha=hi?0.75:0.55;
+    g.fillRect(X0,Y,X1-X0,Y0-Y); g.globalAlpha=1;
+    if(N<=200){ g.strokeStyle=css('--slab-edge'); g.globalAlpha=0.6; g.strokeRect(X0+0.5,Y+0.5,X1-X0-1,Y0-Y-1); g.globalAlpha=1; }
+  }
+  // curve
+  g.strokeStyle=css('--true'); g.lineWidth=2.2; g.beginPath();
+  for(let k=0;k<=300;k++){ const x=S.a+(S.b-S.a)*k/300; const p=[sx(x),sy(A(x))]; k?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]); }
+  g.stroke();
+  g.strokeStyle=css('--muted'); g.lineWidth=1; g.beginPath(); g.moveTo(padL,sy(0)); g.lineTo(w-padR,sy(0)); g.stroke();
+}
+function niceTicks(a,b,n){ const span=b-a, raw=span/n, mag=Math.pow(10,Math.floor(Math.log10(raw))); const f=raw/mag; const step=(f<1.5?1:f<3?2:f<7?5:10)*mag; const t=[]; for(let v=Math.ceil(a/step)*step; v<=b+1e-9; v+=step) t.push(Math.round(v*1e9)/1e9); return t; }
+
+// ---------- convergence ----------
+function drawConv(){
+  const {g,w,h}=fit(els.cconv); g.clearRect(0,0,w,h);
+  const S=SOLIDS[st.solid], sec=SECTIONS[st.section], exact=sec.c*S.I;
+  const padL=50,padR=12,padT=10,padB=30, pw=w-padL-padR, ph=h-padT-padB;
+  const series={}; let emin=Infinity,emax=-Infinity, allZero=true, dropped=0;
+  for(const rule in RULES){ const pts=[]; for(const n of CONV_N){ const e=Math.abs(stack(S,sec,rule,n).sum-exact); if(e>1e-12){ pts.push([n,e]); emin=Math.min(emin,e); emax=Math.max(emax,e); allZero=false; } else dropped++; } series[rule]=pts; }
+  if(allZero){ g.fillStyle=css('--muted'); g.font='14px '+css('--body'); g.textAlign='center'; g.fillText('Every rule is exact at every N for this solid.',w/2,h/2); return; }
+  if(dropped){ g.fillStyle=css('--muted'); g.font='11px '+css('--body'); g.textAlign='left'; g.textBaseline='top'; g.fillText('Points with error below 1e−12 (exact to machine precision) are not plotted.',padL,padT+2); }
+  const lo=Math.floor(Math.log10(Math.max(emin,1e-12))), hi=Math.ceil(Math.log10(emax));
+  const sx=n=>padL+Math.log(n)/Math.log(1024)*pw, sy=e=>padT+ph-(Math.log10(e)-lo)/(hi-lo)*ph;
+  g.strokeStyle=css('--line'); g.fillStyle=css('--muted'); g.font='11px '+css('--mono'); g.lineWidth=1;
+  g.textAlign='right'; g.textBaseline='middle';
+  for(let d=lo; d<=hi; d++){ const y=sy(Math.pow(10,d)); g.beginPath(); g.moveTo(padL,y); g.lineTo(w-padR,y); g.stroke(); g.fillText('1e'+d,padL-6,y); }
+  g.textAlign='center'; g.textBaseline='top';
+  for(const n of [1,4,16,64,256,1024]){ const x=sx(n); g.beginPath(); g.moveTo(x,padT); g.lineTo(x,padT+ph); g.stroke(); g.fillText(String(n),x,padT+ph+6); }
+  g.fillText('N',w-padR-6,padT+ph+6);
+  g.save(); g.translate(12,padT+ph/2); g.rotate(-Math.PI/2); g.textAlign='center'; g.textBaseline='middle'; g.fillText('|error|',0,0); g.restore();
+  // reference slopes anchored at current rule's first point
+  const cur=series[st.rule];
+  if(cur.length){ const [n0,e0]=cur[0]; g.setLineDash([4,4]); g.strokeStyle=css('--muted'); g.globalAlpha=0.7;
+    for(const k of [1,2]){ g.beginPath(); let first=true; for(const n of [n0,1024]){ const e=e0*Math.pow(n0/n,k); if(e<Math.pow(10,lo)) continue; const p=[sx(n),sy(e)]; first?g.moveTo(p[0],p[1]):g.lineTo(p[0],p[1]); first=false; } g.stroke();
+      const eEnd=Math.max(e0*Math.pow(n0/1024,k),Math.pow(10,lo)); const nEnd=Math.min(1024,n0*Math.pow(e0/eEnd,1/k)); const nm=Math.sqrt(n0*nEnd), em=e0*Math.pow(n0/nm,k); g.textAlign='left'; g.textBaseline='bottom'; g.fillText(k===1?'1/N':'1/N²',sx(nm)+4,sy(em)-3); }
+    g.setLineDash([]); g.globalAlpha=1; }
+  // series
+  const hue=css('--slab-h'), sat=css('--slab-s'), colors={left:`hsl(${hue} ${sat} 55%)`,right:`hsl(${hue} ${sat} 35%)`,mid:css('--true'),inner:css('--good'),outer:css('--warn')};
+  for(const rule in series){ const pts=series[rule]; const isCur=rule===st.rule; g.strokeStyle=colors[rule]; g.lineWidth=isCur?2.6:1.2; g.globalAlpha=isCur?1:0.45;
+    g.beginPath(); pts.forEach((p,i)=>{ const q=[sx(p[0]),sy(p[1])]; i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]); }); g.stroke();
+    if(isCur){ g.fillStyle=colors[rule]; for(const p of pts){ g.beginPath(); g.arc(sx(p[0]),sy(p[1]),2.5,0,TAU); g.fill(); } }
+    g.globalAlpha=1; }
+  // current N marker
+  const e=Math.abs(stack(S,sec,st.rule,st.N).sum-exact);
+  if(e>1e-13){ g.fillStyle=css('--fg'); g.strokeStyle=css('--panel'); g.lineWidth=2; g.beginPath(); g.arc(sx(st.N),sy(e),5,0,TAU); g.fill(); g.stroke(); }
+  $('convLegend').innerHTML=Object.keys(RULES).map(r=>`<span><i style="background:${colors[r]}"></i>${RULES[r]}${r===st.rule?' (current)':''}</span>`).join('');
+}
+
+// ---------- readout ----------
+function readout(res){
+  const S=SOLIDS[st.solid], sec=SECTIONS[st.section], exact=sec.c*S.I, err=res.sum-exact;
+  $('vN').textContent=st.N; $('vDx').textContent=fmt(res.dx,5);
+  $('vApprox').textContent=fmt(res.sum,5); $('vExact').textContent=fmt(exact,5);
+  $('vFormula').textContent='= '+sec.ctex+' × '+S.Itex;
+  const ve=$('vErr'); ve.textContent=(err>=0?'+':'−')+fmt(Math.abs(err),5); ve.className='v '+(Math.abs(err)<1e-12?'good':'err');
+  const vr=$('vRel'); vr.textContent=Math.abs(err)<1e-12?'exact':fmt(Math.abs(err)/exact*100,4)+' %'; vr.className=ve.className;
+  const ins=$('inspect');
+  if(st.hi>=0&&st.hi<st.N){ const i=st.hi, x0=S.a+i*res.dx, r=res.r[i], v=sec.c*r*r*res.dx; ins.innerHTML=`Slab <b>${i+1}</b> of ${st.N}: x from <b>${fmt(x0,4)}</b> to <b>${fmt(x0+res.dx,4)}</b>, size y = <b>${fmt(r,4)}</b>, cross-section <b>${fmt(sec.c*r*r,4)}</b>, volume <b>${fmt(v,5)}</b>.`; }
+  else ins.textContent='Hover or tap a rectangle below to inspect one slab.';
+}
+
+// ---------- render ----------
+let convDirty=true;
+function render(){
+  const res=stack(SOLIDS[st.solid],SECTIONS[st.section],st.rule,st.N);
+  draw3D(res); draw2D(res); readout(res); drawConv(); convDirty=false;
+}
+function setN(n,fromSlider){ n=Math.max(1,Math.min(NMAX,Math.round(n)||1)); st.N=n; st.hi=-1; els.nbox.value=n; if(!fromSlider) els.nslider.value=nToSlider(n); render(); }
+
+// ---------- events ----------
+els.solid.addEventListener('change',e=>{st.solid=e.target.value; st.hi=-1; convDirty=true; render();});
+els.section.addEventListener('change',e=>{st.section=e.target.value; convDirty=true; render();});
+els.rule.addEventListener('change',e=>{st.rule=e.target.value; convDirty=true; render();});
+els.nslider.addEventListener('input',e=>setN(sliderToN(+e.target.value),true));
+els.nbox.addEventListener('change',e=>setN(+e.target.value,false));
+$('halve').addEventListener('click',()=>setN(Math.ceil(st.N/2),false));
+$('double').addEventListener('click',()=>setN(st.N*2,false));
+els.explode.addEventListener('input',e=>{st.explode=+e.target.value/100*1.2; draw3D(stack(SOLIDS[st.solid],SECTIONS[st.section],st.rule,st.N));});
+let timer=null;
+els.auto.addEventListener('click',()=>{
+  if(timer){ clearInterval(timer); timer=null; els.auto.setAttribute('aria-pressed','false'); els.auto.textContent='Slice finer, automatically'; return; }
+  if(st.N>=512) setN(1,false);
+  els.auto.setAttribute('aria-pressed','true'); els.auto.textContent='Stop';
+  timer=setInterval(()=>{ if(st.N>=512){ clearInterval(timer); timer=null; els.auto.setAttribute('aria-pressed','false'); els.auto.textContent='Slice finer, automatically'; return; } setN(st.N*2,false); },750);
+});
+// rotate + zoom (drag, wheel, pinch, buttons)
+function redraw3D(){ draw3D(stack(SOLIDS[st.solid],SECTIONS[st.section],st.rule,st.N)); }
+function setZoom(z){ st.zoom=Math.max(0.4,Math.min(6,z)); $('zoomLbl').textContent=Math.round(st.zoom*100)+'%'; redraw3D(); }
+let drag=null, pinch=null; const ptrs=new Map();
+els.c3d.addEventListener('pointerdown',e=>{ els.c3d.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+  if(ptrs.size===1){ drag={x:e.clientX,y:e.clientY,yaw:st.yaw,pitch:st.pitch}; pinch=null; }
+  else if(ptrs.size===2){ drag=null; const [a,b]=[...ptrs.values()]; pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),zoom:st.zoom}; } });
+els.c3d.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+  if(pinch&&ptrs.size===2){ const [a,b]=[...ptrs.values()]; const d=Math.hypot(a[0]-b[0],a[1]-b[1]); if(pinch.d>0) setZoom(pinch.zoom*d/pinch.d); return; }
+  if(!drag) return; st.yaw=drag.yaw+(e.clientX-drag.x)*0.008; st.pitch=Math.max(-1.4,Math.min(1.4,drag.pitch+(e.clientY-drag.y)*0.008)); redraw3D(); });
+const endDrag=e=>{ ptrs.delete(e.pointerId); drag=null; pinch=null; };
+els.c3d.addEventListener('wheel',e=>{ e.preventDefault(); setZoom(st.zoom*Math.exp(-e.deltaY*0.0015)); },{passive:false});
+$('zoomIn').addEventListener('click',()=>setZoom(st.zoom*1.25));
+$('zoomOut').addEventListener('click',()=>setZoom(st.zoom/1.25));
+$('zoomReset').addEventListener('click',()=>{ st.yaw=VIEW0.yaw; st.pitch=VIEW0.pitch; setZoom(VIEW0.zoom); });
+els.c3d.addEventListener('pointerup',endDrag); els.c3d.addEventListener('pointercancel',endDrag);
+// inspect
+function pickSlab(e){ const rect=els.c2d.getBoundingClientRect(); const x=e.clientX-rect.left; const t=(x-plot2.px)/plot2.pw; if(t<0||t>1) return -1; return Math.min(st.N-1,Math.floor(t*st.N)); }
+els.c2d.addEventListener('pointermove',e=>{ const i=pickSlab(e); if(i!==st.hi){ st.hi=i; render(); } });
+els.c2d.addEventListener('pointerdown',e=>{ const i=pickSlab(e); st.hi=(i===st.hi)?-1:i; render(); });
+els.c2d.addEventListener('pointerleave',()=>{ if(e_isTouch) return; st.hi=-1; render(); });
+let e_isTouch=false; window.addEventListener('touchstart',()=>{e_isTouch=true;},{passive:true,once:true});
+// resize + theme
+const ro=new ResizeObserver(()=>{convDirty=true; render();});
+[els.c3d,els.c2d,els.cconv].forEach(c=>ro.observe(c));
+if(window.matchMedia){ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{convDirty=true; render();}); }
+new MutationObserver(()=>{convDirty=true; render();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+// ---------- boot (hot-reload aware) ----------
+function start(data){
+  if(data&&data.st) Object.assign(st,data.st);
+  els.solid.value=st.solid; els.section.value=st.section; els.rule.value=st.rule; els.nbox.value=st.N; els.nslider.value=nToSlider(st.N); els.explode.value=Math.round(st.explode/1.2*100); $('zoomLbl').textContent=Math.round(st.zoom*100)+'%';
+  convDirty=true; render();
+}
+if(window.claude&&window.claude.hot&&window.claude.hot.snapshot) window.claude.hot.snapshot(()=>({st}));
+(window.claude&&window.claude.hot&&window.claude.hot.ready)?window.claude.hot.ready(start):start(window.claude&&window.claude.hot?window.claude.hot.data:{});
+})();
+</script>
