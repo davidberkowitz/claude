@@ -1,0 +1,391 @@
+<title>Triangle Limit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a workbench, sibling of Slab Limit. The fan of triangles on the left, the same triangles unrolled on the right, readout and convergence below, notes last. */
+:root{
+  --bg:#e9ecf0; --panel:#ffffff; --panel2:#f3f5f8; --fg:#161b22; --muted:#5a6673; --line:#cfd5dd;
+  --tri-h:208; --tri-s:52%; --tri-l:62%; --tri-edge:hsl(208 40% 28%);
+  --out-h:150; --out-s:35%; --out-l:62%;
+  --true:#c8641f; --true-soft:rgba(200,100,31,.18);
+  --good:#25794a; --warn:#b2541c;
+  --display:"Fraunces", Georgia, "Times New Roman", serif;
+  --body:"Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  --mono:"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1419; --panel:#171d25; --panel2:#1f262f; --fg:#e7ebf0; --muted:#98a4b1; --line:#2d3640;
+  --tri-h:208; --tri-s:48%; --tri-l:48%; --tri-edge:hsl(208 40% 14%);
+  --out-h:150; --out-s:30%; --out-l:42%;
+  --true:#ec9452; --true-soft:rgba(236,148,82,.2); --good:#5cc08a; --warn:#e99a5e; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1419; --panel:#171d25; --panel2:#1f262f; --fg:#e7ebf0; --muted:#98a4b1; --line:#2d3640;
+  --tri-h:208; --tri-s:48%; --tri-l:48%; --tri-edge:hsl(208 40% 14%);
+  --out-h:150; --out-s:30%; --out-l:42%;
+  --true:#ec9452; --true-soft:rgba(236,148,82,.2); --good:#5cc08a; --warn:#e99a5e; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:500;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.01em}
+h2{font-size:1.45rem}
+p{margin:0;max-width:68ch}
+.lede{font-size:1.1rem;color:var(--muted);max-width:60ch}
+header{display:grid;gap:10px}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+.controls{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.ctl{display:grid;gap:5px;min-width:0}
+.ctl label,.lab{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+select,input[type=number],button{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 9px;min-width:0}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid hsl(var(--tri-h) var(--tri-s) 50%);outline-offset:2px}
+button{cursor:pointer}
+button.primary{background:hsl(var(--tri-h) var(--tri-s) 42%);color:#fff;border-color:transparent;font-weight:700}
+button[aria-pressed="true"]{background:var(--true);color:#fff;border-color:transparent}
+input[type=range]{width:100%;accent-color:hsl(var(--tri-h) var(--tri-s) 42%)}
+.nrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.nrow input[type=number]{width:5.5em;font-family:var(--mono)}
+.ctl.wide{grid-column:1/-1}
+@media (min-width:720px){.ctl.wide{grid-column:span 2}}
+
+.stage{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.stage{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;min-width:0;align-content:start}
+.panel .cap{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.panel .cap small{color:var(--muted)}
+canvas{display:block;width:100%;max-width:100%;border-radius:6px;background:var(--panel2);touch-action:none}
+#cfan{aspect-ratio:1/1}
+#cstrip{aspect-ratio:16/10}
+#cconv{aspect-ratio:16/10}
+
+.nums{display:grid;gap:8px;font-variant-numeric:tabular-nums}
+.num{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:6px}
+.num:last-child{border-bottom:0}
+.num .k{color:var(--muted);font-size:.9rem}
+.num .v{font-family:var(--mono);font-size:1.02rem;text-align:right}
+.num .v.big{font-size:1.5rem;font-weight:600}
+.num .v.true{color:var(--true)}
+.num .v.err{color:var(--warn)}
+.num .v.good{color:var(--good)}
+.pi{font-family:var(--mono);font-size:1.6rem;font-weight:600;letter-spacing:.02em;word-break:break-all}
+.pi .ok{color:var(--good)}
+.pi .bad{color:var(--warn)}
+.inspect{font-size:.92rem;color:var(--muted);min-height:2.8em;border-top:1px dashed var(--line);padding-top:8px}
+.inspect b{color:var(--fg);font-family:var(--mono);font-weight:600}
+
+.two{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.two{grid-template-columns:minmax(260px,2fr) minmax(0,3fr)}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+
+.notes{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.notes{grid-template-columns:1fr 1fr}}
+.note{display:grid;gap:8px;align-content:start}
+.note ul,.note ol{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:68ch}
+.formula{font-family:var(--mono);font-size:.95rem;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:10px 12px;overflow-x:auto;white-space:nowrap}
+a{color:hsl(var(--tri-h) var(--tri-s) 42%)}
+.foot{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:12px}
+.refs{font-size:.9rem}
+.refs li{margin-bottom:4px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Area by exhaustion · an explorer</div>
+  <h1>Triangle Limit</h1>
+  <p class="lede">Fill a circle with N triangles that meet at the center. Count their area, unroll them into a strip, and watch the total close in on πr² as the triangles get thinner. This is Archimedes' route to π, and it is the two-dimensional cousin of slicing a solid.</p>
+</header>
+
+<section class="controls" aria-label="Controls">
+  <div class="ctl"><label for="mode">Triangles</label>
+    <select id="mode">
+      <option value="in" selected>Inscribed (corners on the circle)</option>
+      <option value="out">Circumscribed (sides touch the circle)</option>
+      <option value="both">Both, squeezing the circle</option>
+    </select></div>
+  <div class="ctl wide"><label for="nslider">Number of triangles N</label>
+    <input type="range" id="nslider" min="0" max="1000" value="0">
+    <div class="nrow">
+      <button id="halve" type="button" aria-label="Halve N">÷2</button>
+      <input type="number" id="nbox" min="3" max="1024" value="6" aria-label="N">
+      <button id="double" type="button" aria-label="Double N">×2</button>
+      <button id="auto" type="button" class="primary" aria-pressed="false">Add triangles, automatically</button>
+    </div></div>
+  <div class="ctl"><label for="spread">Pull triangles apart</label>
+    <input type="range" id="spread" min="0" max="100" value="0"></div>
+</section>
+
+<section class="stage">
+  <div class="panel">
+    <div class="cap"><h2>The fan</h2><small>Hover or tap a triangle · copper circle is the target</small></div>
+    <canvas id="cfan" aria-label="Circle filled with N triangles meeting at the center"></canvas>
+  </div>
+  <div class="panel">
+    <div class="cap"><h2>The same triangles, unrolled</h2><small>Dashed box is the rectangle πr × r they are heading for</small></div>
+    <canvas id="cstrip" aria-label="The N triangles rearranged tip to tail into a strip"></canvas>
+  </div>
+</section>
+
+<section class="two">
+  <div class="panel">
+    <div class="cap"><h2>Readout</h2><small>r = 1, areas in units of r²</small></div>
+    <div class="nums">
+      <div class="num"><span class="k">Triangles N</span><span class="v" id="vN">6</span></div>
+      <div class="num"><span class="k">Angle at center</span><span class="v" id="vAng"></span></div>
+      <div class="num"><span class="k">One triangle ½·b·h</span><span class="v" id="vOne"></span></div>
+      <div class="num"><span class="k">Inscribed total</span><span class="v" id="vIn"></span></div>
+      <div class="num"><span class="k">Circle πr²</span><span class="v big true" id="vCircle"></span></div>
+      <div class="num"><span class="k">Circumscribed total</span><span class="v" id="vOut"></span></div>
+      <div class="num"><span class="k">Error (<span id="vWhich">inscribed</span> − circle)</span><span class="v err" id="vErr"></span></div>
+      <div class="num"><span class="k">Relative error</span><span class="v err" id="vRel"></span></div>
+    </div>
+    <div class="lab">π estimated from the triangles</div>
+    <div class="pi" id="vPi"></div>
+    <div class="inspect" id="inspect">Hover or tap a triangle to inspect it.</div>
+  </div>
+  <div class="panel">
+    <div class="cap"><h2>How fast the error shrinks</h2><small>Both axes logarithmic</small></div>
+    <canvas id="cconv" aria-label="Error versus number of triangles on log-log axes"></canvas>
+    <div class="legend" id="convLegend"></div>
+  </div>
+</section>
+
+<section class="notes">
+  <div class="note">
+    <h2>What is happening</h2>
+    <p>Each triangle has its apex at the center, a base of length b, and a height h measured from the center to the base. Its area is ½·b·h. All N triangles share the same h, so the total is</p>
+    <div class="formula">A = N · ½ · b · h = ½ · (N·b) · h = ½ · perimeter · h</div>
+    <p>As N grows, the perimeter N·b tends to the circumference 2πr and the height h tends to the radius r. So the area tends to ½ · 2πr · r = πr². The unrolled strip shows the same thing with no algebra: N triangles alternating up and down form a parallelogram of base ½·perimeter and height h, and that parallelogram straightens into a rectangle πr by r.</p>
+    <p>Inscribed triangles have their corners on the circle, so b = 2r·sin(π/N) and h = r·cos(π/N). Circumscribed triangles have their bases tangent to the circle, so b = 2r·tan(π/N) and h = r. One total is always below πr², the other always above, and the circle is trapped between them.</p>
+  </div>
+  <div class="note">
+    <h2>Things to try</h2>
+    <ul>
+      <li><b>N = 6, inscribed.</b> Six equilateral triangles. The total is 3√3/2 ≈ 2.598, which is why a hexagon looks like a crude circle but is 17% short on area.</li>
+      <li><b>N = 96, both.</b> This is Archimedes' polygon count. His bounds were 3 10/71 &lt; π &lt; 3 1/7, taken from perimeters rather than areas. The circumscribed area here equals half the circumscribed perimeter, so it matches his upper bound. The inscribed area sits a little below his lower bound, because an inscribed polygon's area is ½ · perimeter · h with h &lt; r.</li>
+      <li><b>Error chart.</b> Both the inscribed and circumscribed errors fall like 1/N². The circumscribed error is half the size of the inscribed one at every N, which is visible as a constant gap between the two lines.</li>
+      <li><b>The blend line.</b> One part inscribed plus two parts circumscribed, divided by three, cancels the 1/N² term, and the error drops like 1/N⁴. With N = 96 that blend gives π to six decimals. Archimedes had the numbers to do this and did not; the idea had to wait two thousand years for Richardson.</li>
+      <li><b>Pull the triangles apart.</b> The gaps make the count visible. The areas do not change.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h2>Where the picture misleads</h2>
+    <ul>
+      <li><b>Here the perimeter converges too, unlike the slab stack.</b> In Slab Limit the stack's volume converged but its surface area did not. Here the polygon's perimeter does converge to the circumference. The difference: a chord's direction approaches the tangent direction as it shrinks, while a staircase step never tilts toward the diagonal. Convergence of lengths needs the directions to converge, not just the positions.</li>
+      <li><b>No triangle ever fills the circle.</b> The curved cap outside each inscribed triangle never disappears; it only gets thinner. πr² is the limit of the totals, not the total of infinitely many triangles.</li>
+      <li><b>This is not a proof that π exists.</b> The argument shows area = ½ · circumference · r. Defining π as circumference over diameter is a separate step, and proving that ratio is the same for every circle (Euclid XII.2) is another.</li>
+      <li><b>The π estimate is only as good as the sine.</b> The page uses the computer's sin and tan, which already know π. Archimedes could not, and computed the side lengths by repeated square roots from the hexagon. The honest version of this page is the one in his head.</li>
+      <li><b>1/N² is slow.</b> Each extra correct digit of π costs about three times as many triangles. Modern π computations use series and iterations that gain digits exponentially, not polygons.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h2>References</h2>
+    <ol class="refs">
+      <li>Archimedes, <i>Measurement of a Circle</i>, Proposition 1 (area = ½ · circumference · radius) and Proposition 3 (the 96-gon bounds on π). See the <a href="https://en.wikipedia.org/wiki/Measurement_of_a_Circle" rel="noopener">overview</a>.</li>
+      <li>Euclid, <i>Elements</i> XII.2: circles are to one another as the squares on their diameters, proved by exhaustion with inscribed polygons.</li>
+      <li>Stewart, J. <i>Calculus: Early Transcendentals</i>, §5.1 "Areas and Distances": the circle-by-polygons preview of the definite integral.</li>
+      <li><a href="https://en.wikipedia.org/wiki/Method_of_exhaustion" rel="noopener">Method of exhaustion</a>, Wikipedia, for the Eudoxus and Archimedes background.</li>
+      <li>Richardson, L. F. (1911), "The approximate arithmetical solution by finite differences...", <i>Phil. Trans. R. Soc. A</i> 210: the extrapolation idea behind the blend line.</li>
+      <li>Error expansions used by the page: N·sin(2π/N)/2 = π − 2π³/(3N²) + …, and N·tan(π/N) = π + π³/(3N²) + …, from the Taylor series of sin and tan.</li>
+    </ol>
+  </div>
+</section>
+
+<p class="foot">Built by David Berkowitz with research from Anthropic Claude. All numbers are computed live in the page from the formulas above.</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+const TAU=Math.PI*2;
+// ---------- model (r = 1) ----------
+function geom(N){
+  const a=TAU/N;
+  const inB=2*Math.sin(Math.PI/N), inH=Math.cos(Math.PI/N);
+  const outB=2*Math.tan(Math.PI/N), outH=1;
+  const Ain=N*0.5*inB*inH, Aout=N*0.5*outB*outH;
+  return {a,inB,inH,outB,outH,Ain,Aout,blend:(Ain+2*Aout)/3};
+}
+const CONV_N=[3,4,6,8,12,16,24,32,48,64,96,128,192,256,384,512,768,1024];
+const SERIES={in:'Inscribed',out:'Circumscribed',blend:'Blend (1 in + 2 out) ÷ 3'};
+
+// ---------- state ----------
+const st={mode:'in',N:6,spread:0,hi:-1};
+const $=id=>document.getElementById(id);
+const els={mode:$('mode'),nslider:$('nslider'),nbox:$('nbox'),spread:$('spread'),auto:$('auto'),cfan:$('cfan'),cstrip:$('cstrip'),cconv:$('cconv')};
+const NMIN=3,NMAX=1024;
+const sliderToN=t=>Math.round(NMIN*Math.exp(t/1000*Math.log(NMAX/NMIN)));
+const nToSlider=n=>Math.round(Math.log(n/NMIN)/Math.log(NMAX/NMIN)*1000);
+function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function triColor(i,kind,hi){
+  if(hi) return css('--true');
+  const h=css(kind==='out'?'--out-h':'--tri-h'), s=css(kind==='out'?'--out-s':'--tri-s');
+  const l=parseFloat(css(kind==='out'?'--out-l':'--tri-l'))+(i%2?6:0);
+  return `hsl(${h} ${s} ${l}%)`;
+}
+function fmt(v,d){ if(!isFinite(v)) return '—'; return v.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fit(cv){ const dpr=window.devicePixelRatio||1; const w=cv.clientWidth,h=cv.clientHeight; const W=Math.round(w*dpr),H=Math.round(h*dpr); if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;} const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); return {g,w,h}; }
+function tri(g,p,q,s){ g.beginPath(); g.moveTo(p[0],p[1]); g.lineTo(q[0],q[1]); g.lineTo(s[0],s[1]); g.closePath(); }
+
+// ---------- fan ----------
+let fan={cx:0,cy:0,R:0};
+function drawFan(){
+  const {g,w,h}=fit(els.cfan); g.clearRect(0,0,w,h);
+  const G=geom(st.N), N=st.N;
+  const Rout=1/Math.cos(Math.PI/N);
+  const reach=(st.mode==='in'?1:Rout)*(1+st.spread*0.35)+0.06;
+  const R=Math.min(w,h)/2/reach, cx=w/2, cy=h/2; fan={cx,cy,R};
+  const edgeA=N>200?0.15:N>60?0.35:0.7;
+  const P=(r,t)=>[cx+R*r*Math.cos(t), cy-R*r*Math.sin(t)];
+  const kinds=st.mode==='both'?['out','in']:[st.mode];
+  for(const kind of kinds){
+    for(let i=0;i<N;i++){
+      const hiTri=i===st.hi&&(kind===(st.mode==='both'?'in':st.mode));
+      const mid=(i+0.5)*G.a, off=st.spread*0.35;
+      // shift each triangle outward along its bisector when spread
+      const sx=R*off*Math.cos(mid), sy=-R*off*Math.sin(mid);
+      let p,q,s;
+      if(kind==='in'){ p=P(0,0); q=P(1,i*G.a); s=P(1,(i+1)*G.a); }
+      else { p=P(0,0); q=P(Rout,i*G.a+Math.PI/N); s=P(Rout,(i+1)*G.a+Math.PI/N); }
+      // in 'both' mode, circumscribed is drawn as a faint ring behind
+      tri(g,[p[0]+sx,p[1]+sy],[q[0]+sx,q[1]+sy],[s[0]+sx,s[1]+sy]);
+      g.fillStyle=triColor(i,kind,hiTri); g.globalAlpha=(st.mode==='both'&&kind==='out')?0.55:1; g.fill();
+      g.strokeStyle=css('--tri-edge'); g.globalAlpha=edgeA; g.lineWidth=1; g.lineJoin='round'; g.stroke(); g.globalAlpha=1;
+    }
+  }
+  // target circle
+  g.strokeStyle=css('--true'); g.lineWidth=2; g.setLineDash([6,4]); g.beginPath(); g.arc(cx,cy,R,0,TAU); g.stroke(); g.setLineDash([]);
+  g.fillStyle=css('--true'); g.beginPath(); g.arc(cx,cy,2.5,0,TAU); g.fill();
+  g.fillStyle=css('--muted'); g.font='12px '+css('--mono'); g.textAlign='left'; g.textBaseline='top'; g.fillText('r = 1',10,10);
+}
+function pickFan(e){ const rect=els.cfan.getBoundingClientRect(); const x=e.clientX-rect.left-fan.cx, y=-(e.clientY-rect.top-fan.cy); const d=Math.hypot(x,y)/fan.R; const Rout=1/Math.cos(Math.PI/st.N); if(d>(st.mode==='in'?1:Rout)*(1+st.spread*0.35)+0.05) return -1; let t=Math.atan2(y,x); if(st.mode==='out') t-=Math.PI/st.N; if(t<0) t+=TAU; return Math.min(st.N-1,Math.floor(t/TAU*st.N)); }
+
+// ---------- strip ----------
+let strip={x0:0,y0:0,S:0};
+function drawStrip(){
+  const {g,w,h}=fit(els.cstrip); g.clearRect(0,0,w,h);
+  const G=geom(st.N), N=st.N, kind=st.mode==='out'?'out':'in';
+  const b=kind==='in'?G.inB:G.outB, hh=kind==='in'?G.inH:G.outH;
+  const gap=st.spread*0.6*b;
+  const rows=N>48?Math.ceil(N/48):1, perRow=Math.ceil(N/rows);
+  const rowW=perRow*(b/2+gap)+b/2, rowH=hh;
+  const padL=14,padT=26,padB=34,padR=24;
+  const blockH=rows===1?1.0:rows*(rowH+0.25);
+  const S=Math.min((w-padL-padR)/Math.max(rowW,Math.PI+b/2), (h-padT-padB)/blockH);
+  const x0=padL, y0=padT+Math.max(0,(h-padT-padB-S*blockH)/2); strip={x0,y0,S};
+  const edgeA=N>200?0.15:N>60?0.35:0.7;
+  // target rectangle π × 1 for the first row (only meaningful when a single row)
+  if(rows===1){ g.setLineDash([6,4]); g.strokeStyle=css('--true'); g.lineWidth=2; g.strokeRect(x0,y0,S*Math.PI,S*1); g.setLineDash([]);
+    g.fillStyle=css('--muted'); g.font='12px '+css('--mono'); g.textAlign='left'; g.textBaseline='bottom'; g.fillText('πr = '+fmt(Math.PI,4),x0,y0-6);
+    g.save(); g.translate(x0+S*Math.PI+12,y0+S*0.5); g.rotate(Math.PI/2); g.textAlign='center'; g.textBaseline='bottom'; g.fillText('r',0,0); g.restore(); }
+  else { g.fillStyle=css('--muted'); g.font='12px '+css('--body'); g.textAlign='left'; g.textBaseline='bottom'; g.fillText(N+' triangles in '+rows+' rows; each row would be part of the πr × r rectangle',x0,y0-6); }
+  for(let i=0;i<N;i++){
+    const row=Math.floor(i/perRow), k=i%perRow;
+    const left=x0+S*(k*(b/2+gap)), top=y0+row*S*(rowH+0.25);
+    const up=(k%2===0);
+    let p,q,s;
+    if(up){ p=[left,top+S*hh]; q=[left+S*b,top+S*hh]; s=[left+S*b/2,top]; }
+    else { p=[left,top]; q=[left+S*b,top]; s=[left+S*b/2,top+S*hh]; }
+    tri(g,p,q,s); g.fillStyle=triColor(i,kind,i===st.hi); g.fill();
+    g.strokeStyle=css('--tri-edge'); g.globalAlpha=edgeA; g.lineWidth=1; g.lineJoin='round'; g.stroke(); g.globalAlpha=1;
+  }
+  // dimension labels for the parallelogram
+  if(rows===1){ g.fillStyle=css('--fg'); g.font='12px '+css('--mono'); g.textAlign='left'; g.textBaseline='top';
+    g.fillText('base ½·N·b = '+fmt(N*b/2,4)+'   height h = '+fmt(hh,4),x0,y0+S*Math.max(1,hh)+8); }
+}
+function pickStrip(e){ const rect=els.cstrip.getBoundingClientRect(); const x=(e.clientX-rect.left-strip.x0)/strip.S, y=(e.clientY-rect.top-strip.y0)/strip.S; const G=geom(st.N), N=st.N, kind=st.mode==='out'?'out':'in'; const b=kind==='in'?G.inB:G.outB, hh=kind==='in'?G.inH:G.outH; const gap=st.spread*0.6*b; const rows=N>48?Math.ceil(N/48):1, perRow=Math.ceil(N/rows); const row=Math.floor(y/(hh+0.25)); if(row<0||row>=rows) return -1; const yy=y-row*(hh+0.25); if(yy<0||yy>hh) return -1; const k=Math.floor(x/(b/2+gap)); const i=row*perRow+k; if(k<0||k>=perRow||i>=N) return -1; return i; }
+
+// ---------- convergence ----------
+function drawConv(){
+  const {g,w,h}=fit(els.cconv); g.clearRect(0,0,w,h);
+  const padL=50,padR=12,padT=10,padB=30, pw=w-padL-padR, ph=h-padT-padB;
+  const series={in:[],out:[],blend:[]}; let emin=Infinity,emax=-Infinity;
+  for(const n of CONV_N){ const G=geom(n); const e={in:Math.abs(G.Ain-Math.PI),out:Math.abs(G.Aout-Math.PI),blend:Math.abs(G.blend-Math.PI)}; for(const k in e){ if(e[k]>1e-15){ series[k].push([n,e[k]]); emin=Math.min(emin,e[k]); emax=Math.max(emax,e[k]); } } }
+  const lo=Math.floor(Math.log10(emin)), hi=Math.ceil(Math.log10(emax));
+  const sx=n=>padL+Math.log(n/3)/Math.log(1024/3)*pw, sy=e=>padT+ph-(Math.log10(e)-lo)/(hi-lo)*ph;
+  g.strokeStyle=css('--line'); g.fillStyle=css('--muted'); g.font='11px '+css('--mono'); g.lineWidth=1;
+  g.textAlign='right'; g.textBaseline='middle';
+  const step=(hi-lo)>10?2:1;
+  for(let d=lo; d<=hi; d+=step){ const y=sy(Math.pow(10,d)); g.beginPath(); g.moveTo(padL,y); g.lineTo(w-padR,y); g.stroke(); g.fillText('1e'+d,padL-6,y); }
+  g.textAlign='center'; g.textBaseline='top';
+  for(const n of [3,6,12,24,48,96,192,384,768]){ const x=sx(n); g.beginPath(); g.moveTo(x,padT); g.lineTo(x,padT+ph); g.stroke(); g.fillText(String(n),x,padT+ph+6); }
+  g.save(); g.translate(12,padT+ph/2); g.rotate(-Math.PI/2); g.textAlign='center'; g.textBaseline='middle'; g.fillText('|error|',0,0); g.restore();
+  // reference slopes anchored at inscribed N=3
+  const [n0,e0]=series.in[0]; g.setLineDash([4,4]); g.strokeStyle=css('--muted'); g.globalAlpha=0.7;
+  for(const k of [2,4]){ const eEnd=Math.max(e0*Math.pow(n0/1024,k),Math.pow(10,lo)); const nEnd=Math.min(1024,n0*Math.pow(e0/eEnd,1/k));
+    g.beginPath(); g.moveTo(sx(n0),sy(e0)); g.lineTo(sx(nEnd),sy(eEnd)); g.stroke();
+    const nm=Math.sqrt(n0*nEnd), em=e0*Math.pow(n0/nm,k); g.textAlign='left'; g.textBaseline='bottom'; g.fillText(k===2?'1/N²':'1/N⁴',sx(nm)+4,sy(em)-3); }
+  g.setLineDash([]); g.globalAlpha=1;
+  const hue=css('--tri-h'), sat=css('--tri-s');
+  const colors={in:`hsl(${hue} ${sat} 45%)`,out:`hsl(${css('--out-h')} 45% 40%)`,blend:css('--true')};
+  const bold={in:st.mode!=='out', out:st.mode!=='in', blend:false};
+  for(const k in series){ const pts=series[k]; g.strokeStyle=colors[k]; g.lineWidth=bold[k]?2.6:1.4; g.globalAlpha=bold[k]?1:0.6;
+    g.beginPath(); pts.forEach((p,i)=>{ const q=[sx(p[0]),sy(p[1])]; i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]); }); g.stroke();
+    g.fillStyle=colors[k]; for(const p of pts){ g.beginPath(); g.arc(sx(p[0]),sy(p[1]),bold[k]?2.5:1.8,0,TAU); g.fill(); } g.globalAlpha=1; }
+  // current N marker
+  const G=geom(st.N); const cur=st.mode==='out'?Math.abs(G.Aout-Math.PI):Math.abs(G.Ain-Math.PI);
+  if(cur>1e-15){ g.fillStyle=css('--fg'); g.strokeStyle=css('--panel'); g.lineWidth=2; g.beginPath(); g.arc(sx(st.N),sy(cur),5,0,TAU); g.fill(); g.stroke(); }
+  $('convLegend').innerHTML=Object.keys(SERIES).map(k=>`<span><i style="background:${colors[k]}"></i>${SERIES[k]}</span>`).join('');
+}
+
+// ---------- readout ----------
+function readout(){
+  const G=geom(st.N), N=st.N, useOut=st.mode==='out';
+  const A=useOut?G.Aout:G.Ain, err=A-Math.PI;
+  $('vN').textContent=N; $('vAng').textContent=fmt(360/N,3)+'°';
+  const b=useOut?G.outB:G.inB, hh=useOut?G.outH:G.inH;
+  $('vOne').textContent=fmt(b,4)+' × '+fmt(hh,4)+' ÷ 2 = '+fmt(0.5*b*hh,5);
+  $('vIn').textContent=fmt(G.Ain,6); $('vOut').textContent=fmt(G.Aout,6); $('vCircle').textContent=fmt(Math.PI,6);
+  $('vWhich').textContent=useOut?'circumscribed':'inscribed';
+  $('vErr').textContent=(err>=0?'+':'−')+fmt(Math.abs(err),6); $('vRel').textContent=fmt(Math.abs(err)/Math.PI*100,4)+' %';
+  // π digits
+  const est=A.toFixed(10), real=Math.PI.toFixed(10); let k=0; while(k<est.length&&est[k]===real[k]) k++;
+  $('vPi').innerHTML='<span class="ok">'+est.slice(0,k)+'</span><span class="bad">'+est.slice(k)+'</span>';
+  const ins=$('inspect');
+  if(st.hi>=0&&st.hi<N){ const i=st.hi; ins.innerHTML=`Triangle <b>${i+1}</b> of ${N}: angle at center <b>${fmt(360/N,3)}°</b>, base <b>${fmt(b,5)}</b>, height <b>${fmt(hh,5)}</b>, area <b>${fmt(0.5*b*hh,6)}</b>. N of these make <b>${fmt(A,6)}</b>.`; }
+  else ins.textContent='Hover or tap a triangle to inspect it.';
+}
+
+// ---------- render ----------
+function render(){ drawFan(); drawStrip(); readout(); drawConv(); }
+function setN(n,fromSlider){ n=Math.max(NMIN,Math.min(NMAX,Math.round(n)||NMIN)); st.N=n; st.hi=-1; els.nbox.value=n; if(!fromSlider) els.nslider.value=nToSlider(n); render(); }
+
+// ---------- events ----------
+els.mode.addEventListener('change',e=>{st.mode=e.target.value; st.hi=-1; render();});
+els.nslider.addEventListener('input',e=>setN(sliderToN(+e.target.value),true));
+els.nbox.addEventListener('change',e=>setN(+e.target.value,false));
+$('halve').addEventListener('click',()=>setN(Math.ceil(st.N/2),false));
+$('double').addEventListener('click',()=>setN(st.N*2,false));
+els.spread.addEventListener('input',e=>{st.spread=+e.target.value/100; drawFan(); drawStrip();});
+let timer=null;
+els.auto.addEventListener('click',()=>{
+  const label='Add triangles, automatically';
+  if(timer){ clearInterval(timer); timer=null; els.auto.setAttribute('aria-pressed','false'); els.auto.textContent=label; return; }
+  if(st.N>=768) setN(3,false);
+  els.auto.setAttribute('aria-pressed','true'); els.auto.textContent='Stop';
+  timer=setInterval(()=>{ if(st.N>=768){ clearInterval(timer); timer=null; els.auto.setAttribute('aria-pressed','false'); els.auto.textContent=label; return; } setN(st.N*2,false); },750);
+});
+let isTouch=false; window.addEventListener('touchstart',()=>{isTouch=true;},{passive:true,once:true});
+function hook(cv,pick){
+  cv.addEventListener('pointermove',e=>{ const i=pick(e); if(i!==st.hi){ st.hi=i; render(); } });
+  cv.addEventListener('pointerdown',e=>{ const i=pick(e); st.hi=(i===st.hi)?-1:i; render(); });
+  cv.addEventListener('pointerleave',()=>{ if(isTouch) return; if(st.hi!==-1){ st.hi=-1; render(); } });
+}
+hook(els.cfan,pickFan); hook(els.cstrip,pickStrip);
+const ro=new ResizeObserver(()=>render()); [els.cfan,els.cstrip,els.cconv].forEach(c=>ro.observe(c));
+if(window.matchMedia){ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>render()); }
+new MutationObserver(()=>render()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+// ---------- boot ----------
+function start(data){
+  if(data&&data.st) Object.assign(st,data.st);
+  els.mode.value=st.mode; els.nbox.value=st.N; els.nslider.value=nToSlider(st.N); els.spread.value=Math.round(st.spread*100);
+  render();
+}
+if(window.claude&&window.claude.hot&&window.claude.hot.snapshot) window.claude.hot.snapshot(()=>({st}));
+(window.claude&&window.claude.hot&&window.claude.hot.ready)?window.claude.hot.ready(start):start(window.claude&&window.claude.hot?window.claude.hot.data:{});
+})();
+</script>
