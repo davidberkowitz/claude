@@ -1,0 +1,593 @@
+<title>Physics Playground Level 2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a lab bench. Sticky lesson strip on top; each lesson is picture + big idea, then a two-pane panel: the live scene on the left and its graph on the right (stacked on a phone), measurements table under them, then try-this, what-you-saw and one check. */
+:root{
+  --bg:#f1f4ef; --panel:#ffffff; --panel2:#e9eee9; --ink:#172529; --muted:#55666b; --line:#d2dbd6;
+  --teal:#0e7c73; --amber:#d99a2b; --coral:#dd5f44; --sky:#bfe0e8;
+  --s1:#0a8f80; --s2:#bf6f00; --s1-soft:rgba(10,143,128,.16);
+  --good:#2a8a4a; --bad:#c2452c;
+  --display:"Fredoka","Trebuchet MS","Segoe UI",sans-serif;
+  --body:"Nunito","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1a1c; --panel:#16252a; --panel2:#1e3035; --ink:#e7efed; --muted:#9db1ad; --line:#2a3d42;
+  --teal:#2cc2b2; --amber:#f0b84e; --coral:#f2816a; --sky:#27515c;
+  --s1:#1fa093; --s2:#c4862a; --s1-soft:rgba(31,160,147,.2);
+  --good:#5ccc82; --bad:#f08a76; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1a1c; --panel:#16252a; --panel2:#1e3035; --ink:#e7efed; --muted:#9db1ad; --line:#2a3d42;
+  --teal:#2cc2b2; --amber:#f0b84e; --coral:#f2816a; --sky:#27515c;
+  --s1:#1fa093; --s2:#c4862a; --s1-soft:rgba(31,160,147,.2);
+  --good:#5ccc82; --bad:#f08a76; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(1.9rem,5vw,2.8rem)}
+h2{font-size:clamp(1.5rem,4vw,2.1rem)}
+h3{font-size:1.1rem}
+p{margin:0;max-width:62ch}
+a{color:var(--teal)}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:22px}
+
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);padding-block:10px 8px;display:grid;gap:8px;border-bottom:1px solid var(--line)}
+.strip .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-weight:700;font-size:1.15rem;display:flex;align-items:center;gap:8px}
+.brand i{width:14px;height:14px;border-radius:50%;background:var(--coral);box-shadow:-18px 0 0 -2px var(--amber),-34px 0 0 -4px var(--teal);margin-left:34px}
+.brand em{font-style:normal;color:var(--muted);font-weight:600;font-size:.9rem}
+.count{font-size:.85rem;color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums}
+.lessons{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.lessons::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px 6px 8px;font:inherit;font-weight:800;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.chip b{width:22px;height:22px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-size:.75rem;color:var(--muted)}
+.chip.done b{background:var(--good);color:#fff}
+.chip[aria-current="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.chip[aria-current="true"] b{background:rgba(255,255,255,.25);color:#fff}
+.chip:focus-visible,button:focus-visible,input:focus-visible,.opt:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+.lesson{display:grid;gap:18px}
+.hero{display:grid;gap:14px;grid-template-columns:1fr;align-items:center}
+@media(min-width:700px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero img{width:100%;max-width:100%;border-radius:18px;aspect-ratio:16/9;object-fit:cover;background:var(--panel2);display:block}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:800}
+.big{font-size:1.15rem;color:var(--muted);font-weight:600}
+.hero .txt{display:grid;gap:10px}
+.intro{grid-template-columns:1fr;gap:14px;padding:0;overflow:hidden}
+.intro img{width:100%;max-width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.intro>div{padding:4px 18px 18px;display:grid;gap:8px}
+@media(min-width:700px){.intro{grid-template-columns:1fr 1fr;align-items:center}.intro img{aspect-ratio:4/3;height:100%}.intro>div{padding:18px}}
+
+.sim{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:grid}
+.panes{display:grid;grid-template-columns:1fr;gap:0}
+@media(min-width:760px){.panes{grid-template-columns:1.25fr 1fr}.panes .gwrap{border-left:1px solid var(--line)}}
+.panes canvas{display:block;width:100%;height:auto;touch-action:none;background:var(--panel2)}
+.stage{cursor:grab}.stage.grabbing{cursor:grabbing}
+.gwrap{display:grid;grid-template-rows:auto 1fr;background:var(--panel)}
+.gwrap .gtitle{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800;padding:8px 12px 0}
+.graph{background:var(--panel)!important}
+.caption{padding:8px 14px;font-size:.9rem;color:var(--muted);font-weight:600;border-top:1px solid var(--line);min-height:38px;display:flex;align-items:center}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;padding:12px 14px;border-top:1px solid var(--line);align-items:end}
+.ctl{display:grid;gap:4px;min-width:0}
+.ctl .lab,.seg .lab,.data .lab{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.ctl input[type=range]{width:min(220px,60vw);accent-color:var(--teal)}
+.ctl .ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);font-weight:700}
+.seg{display:grid;gap:4px}
+.seg .row{display:flex;flex-wrap:wrap;gap:4px;background:var(--panel2);border-radius:10px;padding:3px}
+.seg button{font:inherit;font-weight:800;font-size:.85rem;border:0;background:transparent;color:var(--ink);padding:6px 11px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.btn{font:inherit;font-weight:800;font-size:.92rem;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.btn.primary{background:var(--coral);border-color:var(--coral);color:#fff}
+.btn.tog[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.hold:active,.btn.hold[data-down="1"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.data{padding:10px 14px 12px;border-top:1px solid var(--line);display:grid;gap:6px}
+.data .tw{overflow-x:auto}
+.data table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+.data th{text-align:left;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 10px 4px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.data td{padding:4px 10px 4px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.85rem;white-space:nowrap}
+.data td:first-child{color:var(--muted)}
+.data .empty{color:var(--muted);font-size:.9rem;font-weight:600}
+
+.two{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:grid;gap:10px;align-content:start;min-width:0}
+.card h3{display:flex;align-items:center;gap:8px}
+.card h3 span{width:10px;height:10px;border-radius:50%;background:var(--amber);flex:0 0 auto}
+.card ul{margin:0;padding-left:1.2em;display:grid;gap:6px}
+.saw{font-size:1rem}
+.opts{display:grid;gap:8px}
+.opt{font:inherit;text-align:left;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;font-weight:600;line-height:1.35}
+.opt[data-state="right"]{border-color:var(--good);background:color-mix(in srgb,var(--good) 16%,var(--panel))}
+.opt[data-state="wrong"]{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--panel))}
+.why{font-size:.95rem;color:var(--muted);font-weight:600;min-height:1.4em}
+.nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+footer{color:var(--muted);font-size:.85rem;display:grid;gap:4px;border-top:1px solid var(--line);padding-top:14px}
+footer p{max-width:none}
+/* narration */
+.listen{display:inline-flex;align-items:center;gap:6px;font:inherit;font-weight:800;font-size:.82rem;border:1px solid var(--line);background:var(--panel2);color:var(--teal);padding:5px 12px 5px 9px;border-radius:999px;cursor:pointer;justify-self:start;white-space:nowrap;flex:0 0 auto}
+.listen svg{flex:0 0 auto}
+.listen[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sayrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sayhint{font-size:.8rem;color:var(--muted);font-weight:600}
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto!important} }
+</style>
+
+<div class="wrap">
+  <div class="strip">
+    <div class="top">
+      <div class="brand"><i></i>Physics Playground <em>Level 2</em></div>
+      <div class="count" id="count"></div>
+    </div>
+    <div class="lessons" id="lessons" role="tablist" aria-label="Lessons"></div>
+  </div>
+  <section class="lesson" id="lesson" aria-live="polite"></section>
+  <footer>
+    <p><strong>Physics Playground, Level 2</strong> by David Berkowitz, with research from Anthropic Claude images from Google Gemini Nano Banana and narration from Google Gemini text-to-speech. Nine lessons that add measuring and graphs, still with no equations. Level 1 is at <a href="https://claude.ai/artifact/PTzxi4b6AHsBdkhferfwpg">Physics Playground</a>.</p>
+    <p>Your progress is saved only on this device.</p>
+  </footer>
+</div>
+
+<script>
+'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+function el(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='html')e.innerHTML=v;else e.setAttribute(k,v);}for(const k of kids){if(k==null)continue;e.append(k.nodeType?k:document.createTextNode(k));}return e;}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const fmt=(v,d=1)=>Number(v).toFixed(d);
+let TOK={};function readTokens(){const cs=getComputedStyle(document.documentElement);TOK={};for(const k of['bg','panel','panel2','ink','muted','line','teal','amber','coral','sky','s1','s2','s1-soft','good','bad'])TOK[k.replace('-soft','Soft')]=cs.getPropertyValue('--'+k).trim();}
+readTokens();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readTokens);
+new MutationObserver(readTokens).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---- controls ----
+function slider(parent,{id,label,lo,hi,min=0,max=1,step=0.01,value,onInput}){
+  const inp=el('input',{type:'range',id,min,max,step,value});
+  parent.append(el('div',{class:'ctl'},el('label',{class:'lab',for:id},label),inp,el('div',{class:'ends'},el('span',{},lo),el('span',{},hi))));
+  inp.addEventListener('input',()=>onInput(+inp.value));return inp;
+}
+function seg(parent,{id,label,options,value,onChange}){
+  const row=el('div',{class:'row',role:'group','aria-label':label});
+  const btns=options.map(o=>{const b=el('button',{type:'button',id:id+'-'+o.v,'aria-pressed':String(o.v===value)},o.l);b.addEventListener('click',()=>{btns.forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');onChange(o.v);});return b;});
+  row.append(...btns);parent.append(el('div',{class:'seg'},el('span',{class:'lab'},label),row));
+  return {set(v){btns.forEach(x=>x.setAttribute('aria-pressed',String(x.id===id+'-'+v)));}};
+}
+function button(parent,label,onClick,{primary=false,id}={}){const b=el('button',{type:'button',class:'btn'+(primary?' primary':''),id:id||('b-'+label.replace(/\W+/g,'-').toLowerCase())},label);b.addEventListener('click',onClick);parent.append(b);return b;}
+function toggle(parent,{id,label,checked=false,onChange}){const b=el('button',{type:'button',class:'btn tog',id,'aria-pressed':String(checked)},label);b.addEventListener('click',()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));onChange(on);});parent.append(b);return b;}
+function holdButton(parent,{id,label,onChange}){const b=el('button',{type:'button',class:'btn hold',id},label);let down=false;const set=v=>{if(down===v)return;down=v;b.dataset.down=v?'1':'';onChange(v);};
+  b.addEventListener('pointerdown',e=>{b.setPointerCapture(e.pointerId);set(true);});['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>set(false)));
+  b.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();set(true);}});b.addEventListener('keyup',()=>set(false));b.addEventListener('blur',()=>set(false));parent.append(b);return b;}
+function dataTable(host,cols,{label='Measurements',empty='Nothing measured yet.'}={}){
+  const tw=el('div',{class:'tw'});host.append(el('span',{class:'lab'},label),tw);const rows=[];
+  function render(){tw.innerHTML='';if(!rows.length){tw.append(el('p',{class:'empty'},empty));return;}
+    const t=el('table',{},el('thead',{},el('tr',{},...cols.map(c=>el('th',{},c)))),el('tbody',{},...rows.map(r=>el('tr',{},...r.map(v=>el('td',{},String(v)))))));tw.append(t);}
+  render();return{rows,add(r){rows.push(r);if(rows.length>10)rows.shift();render();},clear(){rows.length=0;render();}};
+}
+
+// ---- drawing ----
+function circle(ctx,x,y,r,fill,stroke,lw=2){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}}
+function label(ctx,text,x,y,{size=14,color,align='center',weight=800,mono=false,base='middle'}={}){ctx.font=`${weight} ${size}px ${mono?'"JetBrains Mono", Menlo, monospace':'Nunito, sans-serif'}`;ctx.fillStyle=color||TOK.ink;ctx.textAlign=align;ctx.textBaseline=base;ctx.fillText(text,x,y);}
+function stopwatch(ctx,x,y,t,running){ // a readout, right-aligned at x
+  ctx.fillStyle=TOK.panel;ctx.strokeStyle=running?TOK.coral:TOK.line;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x-108,y-16,108,32,8);ctx.fill();ctx.stroke();
+  label(ctx,fmt(t,2)+' s',x-10,y,{align:'right',size:16,mono:true,color:TOK.ink});circle(ctx,x-94,y,5,running?TOK.coral:TOK.muted);}
+function niceStep(range,target){const raw=range/target;const p=Math.pow(10,Math.floor(Math.log10(raw)));const n=raw/p;return (n<1.5?1:n<3?2:n<7?5:10)*p;}
+function graph(ctx,w,h,o){
+  const ml=o.ml||48,mr=12,mt=12,mb=34;const pw=w-ml-mr,ph=h-mt-mb;
+  const px=x=>ml+(x-o.xmin)/(o.xmax-o.xmin)*pw,py=y=>mt+ph-(y-o.ymin)/(o.ymax-o.ymin)*ph;
+  ctx.fillStyle=TOK.panel;ctx.fillRect(0,0,w,h);
+  const xs=o.xstep||niceStep(o.xmax-o.xmin,5),ys=o.ystep||niceStep(o.ymax-o.ymin,4);
+  ctx.strokeStyle=TOK.line;ctx.lineWidth=1;
+  for(let x=o.xmin;x<=o.xmax+1e-9;x+=xs){const X=px(x);ctx.beginPath();ctx.moveTo(X,mt);ctx.lineTo(X,mt+ph);ctx.stroke();label(ctx,String(+x.toFixed(2)),X,mt+ph+10,{size:11,color:TOK.muted,weight:700,mono:true});}
+  for(let y=o.ymin;y<=o.ymax+1e-9;y+=ys){const Y=py(y);ctx.beginPath();ctx.moveTo(ml,Y);ctx.lineTo(ml+pw,Y);ctx.stroke();label(ctx,String(+y.toFixed(2)),ml-6,Y,{size:11,color:TOK.muted,weight:700,align:'right',mono:true});}
+  ctx.strokeStyle=TOK.muted;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
+  label(ctx,o.xl,ml+pw/2,h-6,{size:12,color:TOK.muted,weight:800});
+  ctx.save();ctx.translate(12,mt+ph/2);ctx.rotate(-Math.PI/2);label(ctx,o.yl,0,0,{size:12,color:TOK.muted,weight:800});ctx.restore();
+  return{px,py,ml,mt,pw,ph,
+    clip(){ctx.save();ctx.beginPath();ctx.rect(ml,mt,pw,ph);ctx.clip();},unclip(){ctx.restore();},
+    point(x,y,c,r=5,ring=true){circle(ctx,px(x),py(y),r,ring?c:TOK.panel,ring?TOK.panel:c,2);},
+    line(pts,c,{dash,width=2.5}={}){if(pts.length<2)return;ctx.strokeStyle=c;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash||[]);ctx.beginPath();pts.forEach((p,i)=>ctx[i?'lineTo':'moveTo'](px(p[0]),py(p[1])));ctx.stroke();ctx.setLineDash([]);},
+    area(pts,c){if(pts.length<2)return;ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(px(pts[0][0]),py(o.ymin));pts.forEach(p=>ctx.lineTo(px(p[0]),py(p[1])));ctx.lineTo(px(pts[pts.length-1][0]),py(o.ymin));ctx.closePath();ctx.fill();},
+    vline(x,c){ctx.strokeStyle=c;ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(px(x),mt);ctx.lineTo(px(x),mt+ph);ctx.stroke();ctx.setLineDash([]);},
+    hline(y,c){ctx.strokeStyle=c;ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(ml,py(y));ctx.lineTo(ml+pw,py(y));ctx.stroke();ctx.setLineDash([]);},
+    tag(x,y,text,c,dx=8,dy=-10,align='left'){label(ctx,text,px(x)+dx,py(y)+dy,{size:12,color:c,align});}};
+}
+
+// ---- lessons ----
+const LESSONS=[
+{id:'ruler',title:'Ruler and stopwatch',big:'Measure where something is and when it was there. Put the dots on a graph and a story appears.',
+ img:'img2/ruler.jpg',alt:'A toy train on a track beside a ruler, with a robot holding a stopwatch',gtitle:'Position (m) against time (s)',
+ tryList:['Tap Start, then tap Lap every time the train passes a metre mark. Watch the dots land on the graph.','Reset and try the fast train. Are the dots steeper or flatter?','Turn on auto-lap and compare the three speeds.'],
+ saw:'Each lap is one measurement: a time and a place. On the graph, a steady train makes dots that line up in a straight slope. A faster train makes a steeper slope, because it covers more metres in each second. The slope of a position–time graph is the speed, and you can read it without any formula: look at how many metres it climbs per second.',
+ quiz:{q:'A train at steady speed makes a position–time graph that is...',opts:['A straight sloping line','A curve that bends upward','A flat line'],ans:0,why:'Same metres every second means the dots climb by the same amount each second, which is a straight line.'},
+ sim:simRuler},
+{id:'match',title:'Match the graph',big:'A position–time graph is a recording of a walk. You can read a walk off it, and you can walk one into it.',
+ img:'img2/match.jpg',alt:'A child walking along a chalk line while a friend draws a line on an easel',gtitle:'Position (m) against time (s)',
+ tryList:['Tap Start and drag the walker so your line lands on the target line.','Find the flat part. What do you have to do to make a flat line?','Try the other two targets. One of them has you walking back.'],
+ saw:'Flat means standing still. Sloping up means walking away from the start. Sloping down means walking back. Steeper means faster. Once you can feel that in your thumb, you can read any position–time graph like a sentence.',
+ quiz:{q:'A flat part of a position–time graph means the walker is...',opts:['Standing still','Walking at a steady speed','Speeding up'],ans:0,why:'Flat means the position is not changing as time goes by, so the walker is not moving.'},
+ sim:simMatch},
+{id:'speed',title:'Speed up, slow down',big:'A speed–time graph shows how fast, not where. The space under the line is how far you went.',
+ img:'img2/speed.jpg',alt:'A small red car with a paper strip unrolling behind it showing a line',gtitle:'Speed (m/s) against time (s)',
+ tryList:['Hold Gas for a few seconds, let go, then hold Brake. Watch the line rise, level out, and fall.','Drive at a steady speed. What shape does the line make?','Compare the shaded area with the distance readout.'],
+ saw:'On this graph, up and down means faster and slower, not forward and back. Gas makes the line climb. Brake makes it drop. Letting go makes it drift down a little, because the road rubs. The shaded area under the line grows exactly as fast as the odometer, because distance is speed stacked up over time.',
+ quiz:{q:'A speed–time line sloping downward means the car is...',opts:['Slowing down','Going backwards','Stopped'],ans:0,why:'The height of the line is the speed. Going down means less speed, which is slowing. Direction is not on this graph at all.'},
+ sim:simSpeed},
+{id:'drop',title:'Dropping and timing',big:'A falling ball speeds up as it goes. Measuring the drop shows the shape of that speeding up.',
+ img:'img2/drop.jpg',alt:'A child on a ladder dropping a ball past a measuring tape while a robot times it',gtitle:'Time to land (s) against drop height (m)',
+ tryList:['Drop from 1 m, then 2 m, then 4 m. Compare the times in the table.','Switch the graph to speed and drop again. What shape is the line?','Turn on slow motion to watch the ball speed up.'],
+ saw:'Four times the height does not take four times as long. It takes about twice as long. That is because the ball is not moving at one speed: it starts slow and gets faster every moment. The speed–time graph says the same thing more simply: a straight rising line, which means the speed grows by the same amount every second.',
+ quiz:{q:'Dropping a ball from 4 m instead of 1 m takes...',opts:['About twice as long','Four times as long','The same time'],ans:0,why:'Because the ball keeps speeding up, the lower metres go by faster than the first one.'},
+ sim:simDrop},
+{id:'spring',title:'Stretch a spring',big:'Add weight, measure the stretch. The graph tells you when a spring is behaving and when it is ruined.',
+ img:'img2/spring.jpg',alt:'A coiled spring hanging with weights, a ruler beside it',gtitle:'Stretch (cm) against weight (g)',
+ tryList:['Add 100 g at a time and read the ruler. How much extra stretch does each 100 g give?','Keep going past 600 g, up to 800 g. Watch the dots leave the straight line.','Take all the weight off. Does the spring go back to where it started?'],
+ saw:'For a while, every extra 100 g stretches the spring by the same extra 2 cm. Same step, same stretch: the dots fall on a straight line. That is what makes a spring useful as a scale. Load it too much and the line bends: the metal is giving way, and when you unload it the spring stays longer than it was. Measuring is how you find that limit before you break something.',
+ quiz:{q:'Each extra 100 g stretched the spring by the same amount. On the graph that shows up as...',opts:['A straight line','A curve that gets steeper','A flat line'],ans:0,why:'Equal steps in weight giving equal steps in stretch is the definition of a straight line.'},
+ sim:simSpring},
+{id:'pendulum',title:'Swing timer',big:'What decides how fast a pendulum swings? Measure it and find out which things do not matter.',
+ img:'img2/pendulum.jpg',alt:'A clock pendulum and a swing side by side, mid-swing, with a robot timing them',gtitle:'Time per swing (s) against length (m)',
+ tryList:['Time three swings at a short length, then a long length.','Keep the length the same and switch the bob from light to heavy. Time it again.','Try a small swing and a big swing. Compare.'],
+ saw:'Only the length changes the time in a way you can see. Longer swings slower. The heavy bob and the light bob take the same time, and a small swing takes almost exactly as long as a big one. The dots make a curve that climbs quickly at first and then flattens: doubling the length does not double the time. Galileo noticed this with a swinging lamp in church and started timing it with his pulse.',
+ quiz:{q:'Which change makes the biggest difference to how long a swing takes?',opts:['Making the string longer','Making the bob heavier','Pulling it back further'],ans:0,why:'Mass and swing size barely move the dots. Length moves them a lot.'},
+ sim:simPendulum},
+{id:'heat',title:'Heat it up',big:'Put a thermometer in melting ice and keep the burner on. The reading does something strange.',
+ img:'img2/heat.jpg',alt:'A glass pot of ice on a stove with a thermometer in it and a notebook showing a stepped line',gtitle:'Temperature (°C) against time (s)',
+ tryList:['Turn the burner on and watch the line. Where does it go flat?','Switch the burner to high. Do the flat parts move up or down, or stay put?','Let it boil. Does the water ever get hotter than 100?'],
+ saw:'The thermometer climbs, then stops dead at 0 while the ice melts, even though heat is pouring in. Then it climbs again and stops at 100 while the water boils. During a flat part, all the heat is going into changing the state, solid to liquid or liquid to gas, not into warming anything. A stronger burner makes the climbs steeper and the flat parts shorter, but it never moves them: melting is 0 and boiling is 100, whatever you do.',
+ quiz:{q:'While the ice is melting, the thermometer...',opts:['Stays at 0 even though heat keeps going in','Climbs steadily','Drops a little'],ans:0,why:'Melting takes heat without raising the temperature. The reading only moves again once all the ice is gone.'},
+ sim:simHeat},
+{id:'dunk',title:'Weigh it, dunk it',big:'Two measurements, grams and millilitres, predict floating before you touch the water.',
+ img:'img2/dunk.jpg',alt:'A kitchen scale with a stone, a measuring jug with a floating block, a rubber duck waiting',gtitle:'Weight (g) against space taken (mL)',
+ tryList:['Measure the stone and the wood block. Look at where they land compared to the water line.','Measure the egg and the plum. They are close to the line. Which side?','Find a tiny thing that sinks and a big thing that floats.'],
+ saw:'Water weighs 1 gram for every millilitre, so the water line on the graph is the dividing line. Anything plotted above it packs more grams into its millilitres than water does, and sinks. Anything below floats. A big thing can be below the line and a tiny thing above it. The graph makes the rule visible: it is not weight alone and not size alone, but weight compared with size.',
+ quiz:{q:'An object plots above the water line, with more grams than millilitres. It will...',opts:['Sink','Float','It depends how big it is'],ans:0,why:'Above the line means heavier than the same amount of water. The water cannot hold it up.'},
+ sim:simDunk},
+{id:'sound',title:'See the sound',big:'An oscilloscope draws the wiggle. Count the wiggles in a slice of time and you have measured a note.',
+ img:'img2/sound.jpg',alt:'A child singing into a microphone attached to an oscilloscope showing a wavy line',gtitle:'Push on the ear against time (ms)',
+ tryList:['Slide the pitch up. Do the wiggles get closer together or further apart?','Slide the loudness. What changes and what stays the same?','Read the wiggles-per-second number. Tap Play to hear that note.'],
+ saw:'The screen shows how the air pushes on your ear, moment by moment. A higher note means more wiggles in the same slice of time, so they look squashed together. A louder note means taller wiggles, but the same spacing. Wiggles per second is the one number that names a note. Scientists call it hertz. The lowest note on a piano is about 27, the highest about 4,000.',
+ quiz:{q:'A higher note shows up on the screen as...',opts:['Wiggles packed closer together','Taller wiggles','A flatter line'],ans:0,why:'Pitch is wiggles per second. More of them in the same time means they are closer together.'},
+ sim:simSound},
+];
+
+// ---- narration: recorded clips, with the device's own voice as a fallback ----
+const AUDIO_DIR='audio2';
+const ICON_PLAY='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
+const ICON_STOP='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+const narr={audio:null,btn:null,queue:[],auto:false};
+try{narr.auto=localStorage.getItem('pp-readaloud')==='1';}catch(e){}
+function setBtn(b,playing){if(!b)return;b.innerHTML=(playing?ICON_STOP:ICON_PLAY)+'<span>'+(playing?'Stop':b.dataset.label)+'</span>';b.setAttribute('aria-pressed',String(playing));}
+function stopNarration(){narr.queue=[];if(narr.audio){narr.audio.onended=narr.audio.onerror=null;narr.audio.pause();narr.audio=null;}try{window.speechSynthesis&&speechSynthesis.cancel();}catch(e){}if(narr.btn){setBtn(narr.btn,false);narr.btn=null;}}
+function playClip(key,text,btn){
+  const a=new Audio(AUDIO_DIR+'/'+key+'.mp3');narr.audio=a;narr.btn=btn||null;setBtn(btn,true);let fell=false;
+  const done=()=>{if(narr.audio!==a)return;narr.audio=null;setBtn(narr.btn,false);narr.btn=null;const next=narr.queue.shift();if(next)playClip(...next);};
+  const quit=()=>{if(narr.audio!==a)return;narr.queue=[];done();};
+  const fallback=()=>{if(narr.audio!==a||fell)return;fell=true;try{const u=new SpeechSynthesisUtterance(typeof text==='function'?text():text);u.rate=0.95;u.onend=done;u.onerror=quit;speechSynthesis.speak(u);}catch(e){quit();}};
+  a.onended=done;a.onerror=fallback;
+  const p=a.play();if(p&&p.catch)p.catch(err=>{if(err&&err.name==='NotAllowedError')quit();else fallback();});
+}
+function narrate(key,text,btn){const same=btn&&narr.btn===btn;stopNarration();if(!same)playClip(key,text,btn);}
+function narrateSeq(list){stopNarration();narr.queue=list.slice(1);playClip(...list[0]);}
+function listenBtn(key,text,label='Listen'){const b=el('button',{type:'button',class:'listen',id:'say-'+key,'aria-pressed':'false'});b.dataset.label=label;setBtn(b,false);b.addEventListener('click',()=>narrate(key,text,b));return b;}
+function cardHead(title,btn){return el('div',{class:'cardhead'},el('h3',{},el('span'),title),btn);}
+
+// ---- runner ----
+let progress={};try{progress=JSON.parse(localStorage.getItem('pp2-progress')||'{}')||{};}catch(e){progress={};}
+function saveProgress(){try{localStorage.setItem('pp2-progress',JSON.stringify(progress));}catch(e){}}
+let current=null,active=null;
+function renderStrip(){
+  const host=$('#lessons');host.innerHTML='';
+  LESSONS.forEach((L,i)=>{const c=el('button',{type:'button',class:'chip'+(progress[L.id]?' done':''),role:'tab','aria-current':String(current===L.id),id:'tab-'+L.id},el('b',{},progress[L.id]?'✓':String(i+1)),L.title);c.addEventListener('click',()=>{location.hash=L.id;});host.append(c);});
+  const n=Object.keys(progress).filter(k=>LESSONS.some(L=>L.id===k)).length;$('#count').textContent=`${n} of ${LESSONS.length} done`;
+  const cur=$('#tab-'+current);if(cur)cur.scrollIntoView({inline:'center',block:'nearest',behavior:reduced?'auto':'smooth'});
+}
+function show(id){
+  const L=LESSONS.find(x=>x.id===id)||LESSONS[0];
+  if(active){active.stop();active=null;}
+  stopNarration();
+  current=L.id;renderStrip();const i=LESSONS.indexOf(L);
+  const host=$('#lesson');host.innerHTML='';
+  const stage=el('canvas',{class:'stage',id:'st-'+L.id,'aria-label':L.title+' scene',role:'img'});
+  const gcan=el('canvas',{class:'graph',id:'gr-'+L.id,'aria-label':L.gtitle,role:'img'});
+  const controls=el('div',{class:'controls'});const caption=el('div',{class:'caption',id:'cap-'+L.id});const data=el('div',{class:'data'});
+  const sim=el('div',{class:'sim'},el('div',{class:'panes'},stage,el('div',{class:'gwrap'},el('div',{class:'gtitle'},L.gtitle),gcan)),caption,controls,data);
+  const opts=el('div',{class:'opts'});const why=el('p',{class:'why',id:'why-'+L.id});
+  L.quiz.opts.forEach((o,k)=>{const b=el('button',{type:'button',class:'opt',id:`q-${L.id}-${k}`},o);b.addEventListener('click',()=>{opts.querySelectorAll('.opt').forEach(x=>x.removeAttribute('data-state'));
+    if(k===L.quiz.ans){b.dataset.state='right';why.textContent='Yes. '+L.quiz.why;if(narr.auto)narrate(L.id+'-why',why.textContent);progress[L.id]=1;saveProgress();renderStrip();}else{b.dataset.state='wrong';why.textContent='Not quite. Measure again, then pick another answer.';if(narr.auto)narrate('nope',why.textContent);}});opts.append(b);});
+  if(progress[L.id]){const b=opts.children[L.quiz.ans];b.dataset.state='right';why.textContent='Yes. '+L.quiz.why;}
+  const SAY={hero:L.title+'. '+L.big,try:'Try this. '+L.tryList.join(' '),saw:'What you saw. '+L.saw,quiz:'Quick check. '+L.quiz.q+' '+L.quiz.opts.map((o,k)=>['First','Second','Third'][k]+' answer: '+o+'.').join(' ')};
+  const heroBtn=listenBtn(L.id+'-hero',SAY.hero),tryBtn=listenBtn(L.id+'-try',SAY.try);
+  const autoBtn=el('button',{type:'button',class:'listen',id:'readaloud','aria-pressed':String(narr.auto),title:'Reads each lesson to you when you open it, and speaks the answer feedback'},'Read to me: '+(narr.auto?'on':'off'));
+  const autoRead=()=>narrateSeq([[L.id+'-hero',SAY.hero,heroBtn],[L.id+'-try',SAY.try,tryBtn]]);
+  autoBtn.addEventListener('click',()=>{narr.auto=!narr.auto;try{localStorage.setItem('pp-readaloud',narr.auto?'1':'0');}catch(e){}autoBtn.setAttribute('aria-pressed',String(narr.auto));autoBtn.textContent='Read to me: '+(narr.auto?'on':'off');if(narr.auto)autoRead();else stopNarration();});
+  const sayRow=el('div',{class:'sayrow'},heroBtn,autoBtn);
+  host.append(...[
+    i===0?el('div',{class:'card intro'},el('img',{src:'img2/hero.jpg',alt:'A child and a robot at a workbench with a tape measure, stopwatch, scale and thermometer, pinning a graph to a corkboard'}),el('div',{},el('h1',{},'Level 2: measure it'),el('p',{class:'big'},'Level 1 was about feeling how things move. Now we write it down. Every lesson here has a measuring tool, a table of what you measured, and a graph that draws itself as you go. Still no equations. The graphs do the talking.'),listenBtn('welcome',()=>document.querySelector('.intro div').textContent))):null,
+    el('div',{class:'hero'},el('img',{src:L.img,alt:L.alt,loading:'eager'}),el('div',{class:'txt'},el('div',{class:'eyebrow'},`Lesson ${i+1} of ${LESSONS.length}`),el('h2',{},L.title),el('p',{class:'big'},L.big),sayRow)),
+    sim,
+    el('div',{class:'two'},el('div',{class:'card'},cardHead('Try this',tryBtn),el('ul',{},...L.tryList.map(t=>el('li',{},t)))),el('div',{class:'card'},cardHead('What you saw',listenBtn(L.id+'-saw',SAY.saw)),el('p',{class:'saw'},L.saw))),
+    el('div',{class:'card'},cardHead('Quick check',listenBtn(L.id+'-quiz',SAY.quiz)),el('p',{},L.quiz.q),opts,why),
+    el('div',{class:'nav'},i>0?el('button',{type:'button',class:'btn',id:'prev',onclick:()=>{location.hash=LESSONS[i-1].id;}},'← '+LESSONS[i-1].title):el('span'),i<LESSONS.length-1?el('button',{type:'button',class:'btn primary',id:'next',onclick:()=>{location.hash=LESSONS[i+1].id;}},'Next: '+LESSONS[i+1].title+' →'):el('span'))
+  ].filter(Boolean));
+  active=runSim(L.sim,stage,gcan,controls,caption,data);
+  window.scrollTo({top:0,behavior:'auto'});
+  if(narr.auto)autoRead();
+}
+function runSim(factory,stage,gcan,controls,caption,data){
+  const sctx=stage.getContext('2d'),gctx=gcan.getContext('2d');let sw=0,sh=0,gw=0,gh=0,last=0,stopped=false,raf=0;
+  const st={setCaption:t=>{caption.textContent=t;}};
+  const sim=factory(controls,st,data);
+  function fit(c,ctx,ratio,minH,maxH){const r=c.getBoundingClientRect();const cw=r.width;const ch=clamp(cw*ratio,minH,maxH);const dpr=Math.min(2,devicePixelRatio||1);c.style.height=ch+'px';c.width=Math.round(cw*dpr);c.height=Math.round(ch*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);return[cw,ch];}
+  function fitAll(){[sw,sh]=fit(stage,sctx,0.6,220,400);[gw,gh]=fit(gcan,gctx,0.62,200,330);if(sim.resize)sim.resize(sw,sh);}
+  fitAll();const ro=new ResizeObserver(()=>fitAll());ro.observe(stage);ro.observe(gcan);
+  const pos=e=>{const r=stage.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};};let down=false;
+  stage.addEventListener('pointerdown',e=>{down=true;stage.setPointerCapture(e.pointerId);stage.classList.add('grabbing');const p=pos(e);sim.pointer&&sim.pointer('down',p.x,p.y,sw,sh);});
+  stage.addEventListener('pointermove',e=>{const p=pos(e);sim.pointer&&sim.pointer(down?'drag':'move',p.x,p.y,sw,sh);});
+  const up=e=>{if(!down)return;down=false;stage.classList.remove('grabbing');const p=pos(e);sim.pointer&&sim.pointer('up',p.x,p.y,sw,sh);};
+  stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+  function frame(t){if(stopped)return;const dt=last?Math.min(0.033,(t-last)/1000):0.016;last=t;sctx.clearRect(0,0,sw,sh);sim.draw(sctx,sw,sh,dt);gctx.clearRect(0,0,gw,gh);sim.drawGraph(gctx,gw,gh);raf=requestAnimationFrame(frame);}
+  raf=requestAnimationFrame(frame);
+  return{stop(){stopped=true;cancelAnimationFrame(raf);ro.disconnect();sim.stop&&sim.stop();}};
+}
+
+// ---- 1. ruler ----
+function simRuler(controls,st,data){
+  const SP={slow:1,medium:2,fast:3};let speed='medium',x=0,t=0,running=false,laps=[],auto=false,nextAuto=1,trace=[];
+  const tbl=dataTable(data,['Lap','Time (s)','Position (m)']);
+  seg(controls,{id:'speed',label:'Train',options:[{v:'slow',l:'Slow'},{v:'medium',l:'Medium'},{v:'fast',l:'Fast'}],value:speed,onChange:v=>{speed=v;reset();}});
+  const startBtn=button(controls,'Start',()=>{if(x>=10)reset();running=!running;startBtn.textContent=running?'Stop':'Start';},{primary:true,id:'start'});
+  button(controls,'Lap',()=>{if(running||t>0)lap();},{id:'lap'});
+  toggle(controls,{id:'auto',label:'Auto-lap every second',onChange:v=>auto=v});
+  button(controls,'Reset',reset,{id:'reset-ruler'});
+  function lap(){laps.push([t,x]);tbl.add([laps.length,fmt(t,2),fmt(x,1)]);}
+  function reset(){x=0;t=0;running=false;laps=[];trace=[];nextAuto=1;tbl.clear();startBtn.textContent='Start';}
+  st.setCaption('Tap Start, then Lap as the train passes the marks.');
+  return{
+    draw(ctx,w,h,dt){if(running){t+=dt;x=Math.min(10,x+SP[speed]*dt);trace.push([t,x]);if(auto&&t>=nextAuto){nextAuto++;lap();}if(x>=10){running=false;startBtn.textContent='Start';}}
+      const gy=h*0.66,x0=w*0.08,x1=w*0.92,m=i=>x0+(x1-x0)*i/10;
+      ctx.fillStyle=TOK.sky;ctx.fillRect(0,0,w,gy);ctx.fillStyle='#8fbf6b';ctx.fillRect(0,gy,w,h-gy);
+      ctx.fillStyle='#7a5a3a';ctx.fillRect(0,gy-6,w,6);ctx.fillStyle='#5a6670';for(let i=0;i<w;i+=18)ctx.fillRect(i,gy-10,8,4);
+      // ruler
+      ctx.fillStyle='#f3e2a5';ctx.fillRect(x0-10,gy+12,x1-x0+20,34);ctx.strokeStyle=TOK.ink;ctx.lineWidth=1.5;
+      for(let i=0;i<=100;i++){const X=x0+(x1-x0)*i/100;const big=i%10===0;ctx.beginPath();ctx.moveTo(X,gy+12);ctx.lineTo(X,gy+12+(big?14:i%5===0?9:5));ctx.stroke();if(big)label(ctx,String(i/10)+(i===100?' m':''),X,gy+36,{size:11,color:TOK.ink,mono:true});}
+      // train
+      const tx=m(x);ctx.fillStyle=TOK.coral;ctx.beginPath();ctx.roundRect(tx-26,gy-40,52,30,6);ctx.fill();ctx.fillStyle=TOK.ink;ctx.fillRect(tx-20,gy-54,16,14);circle(ctx,tx-14,gy-10,7,TOK.ink);circle(ctx,tx+14,gy-10,7,TOK.ink);
+      ctx.strokeStyle=TOK.coral;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(tx,gy-10);ctx.lineTo(tx,gy+12);ctx.stroke();ctx.setLineDash([]);
+      stopwatch(ctx,w-12,24,t,running);label(ctx,fmt(x,1)+' m',12,24,{align:'left',size:16,mono:true});
+      const sl=laps.length>=2?(laps[laps.length-1][1]-laps[0][1])/(laps[laps.length-1][0]-laps[0][0]):null;
+      st.setCaption(x>=10?'End of the ruler. Reset to go again.':sl!=null?`Between your first and last lap the train moved about ${fmt(sl,1)} m every second. The dots line up straight.`:laps.length===1?'One dot. You need at least two to see a slope.':running?'Running. Tap Lap when it passes a mark.':'Tap Start, then Lap as the train passes the marks.');},
+    drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:'time (s)',yl:'position (m)',xmin:0,xmax:10,ymin:0,ymax:10,xstep:2,ystep:2});g.clip();g.line(trace,TOK.s1Soft,{width:6});laps.forEach(p=>g.point(p[0],p[1],TOK.s1,6));g.unclip();if(laps.length>=2)g.tag(laps[laps.length-1][0],laps[laps.length-1][1],'laps',TOK.s1,8,-6);}
+  };
+}
+
+// ---- 2. match ----
+function simMatch(controls,st){
+  const TARGETS={a:[[0,1],[3,1],[6,7],[8,7],[10,2]],b:[[0,0],[5,8],[10,8]],c:[[0,6],[2,6],[4,2],[7,2],[10,8]]};
+  let key='a',t=0,running=false,me=1,trace=[],score=null;
+  function target(tt){const T=TARGETS[key];for(let i=0;i<T.length-1;i++){if(tt<=T[i+1][0]){const u=(tt-T[i][0])/(T[i+1][0]-T[i][0]);return lerp(T[i][1],T[i+1][1],u);}}return T[T.length-1][1];}
+  seg(controls,{id:'target',label:'Target',options:[{v:'a',l:'Walk A'},{v:'b',l:'Walk B'},{v:'c',l:'Walk C'}],value:key,onChange:v=>{key=v;reset();}});
+  button(controls,'Start',()=>{reset();running=true;},{primary:true,id:'start-match'});
+  button(controls,'Reset',reset,{id:'reset-match'});
+  function reset(){t=0;running=false;trace=[];score=null;}
+  st.setCaption('Drag the walker. Tap Start, then keep your line on the target.');
+  return{
+    pointer(type,px,py,w,h){if(type==='down'||type==='drag'){me=clamp((px-w*0.08)/(w*0.84)*8,0,8);}},
+    draw(ctx,w,h,dt){if(running){t+=dt;trace.push([t,me]);if(t>=10){running=false;const ok=trace.filter(p=>Math.abs(p[1]-target(p[0]))<=1).length;score=Math.round(100*ok/trace.length);}}
+      const gy=h*0.7,x0=w*0.08,x1=w*0.92;ctx.fillStyle=TOK.sky;ctx.fillRect(0,0,w,gy);ctx.fillStyle='#8fbf6b';ctx.fillRect(0,gy,w,h-gy);
+      ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x0,gy+14);ctx.lineTo(x1,gy+14);ctx.stroke();for(let i=0;i<=8;i++){const X=x0+(x1-x0)*i/8;ctx.beginPath();ctx.moveTo(X,gy+6);ctx.lineTo(X,gy+22);ctx.stroke();label(ctx,i+' m',X,gy+36,{size:11,color:TOK.ink,mono:true});}
+      // ghost (target walker)
+      const gx=x0+(x1-x0)*target(t)/8;ctx.globalAlpha=0.35;walker(ctx,gx,gy+4,TOK.s2);ctx.globalAlpha=1;label(ctx,'target',gx,gy-62,{size:11,color:TOK.s2});
+      const mx=x0+(x1-x0)*me/8;walker(ctx,mx,gy+4,TOK.s1);label(ctx,'you',mx,gy-62,{size:11,color:TOK.s1});
+      stopwatch(ctx,w-12,24,Math.min(t,10),running);
+      st.setCaption(score!=null?`Your line stayed within 1 m of the target ${score}% of the time.`+(score>=80?' Nice walk.':' Try again, and watch for the flat parts.'):running?'Go! Keep your walker where the target line says.':'Drag the walker. Tap Start, then keep your line on the target.');},
+    drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:'time (s)',yl:'position (m)',xmin:0,xmax:10,ymin:0,ymax:8,xstep:2,ystep:2});g.clip();g.line(TARGETS[key],TOK.s2,{width:3});g.line(trace,TOK.s1,{width:3});if(running||t>0)g.vline(Math.min(t,10),TOK.muted);g.unclip();
+      const T=TARGETS[key];g.tag(T[1][0],T[1][1],'target',TOK.s2,6,-10);if(trace.length>5){const p=trace[Math.floor(trace.length/2)];g.tag(p[0],p[1],'you',TOK.s1,6,12);}}
+  };
+  function walker(ctx,x,y,c){ctx.strokeStyle=c;ctx.fillStyle=c;ctx.lineWidth=4;ctx.lineCap='round';circle(ctx,x,y-46,9,c);ctx.beginPath();ctx.moveTo(x,y-36);ctx.lineTo(x,y-14);ctx.moveTo(x,y-14);ctx.lineTo(x-9,y);ctx.moveTo(x,y-14);ctx.lineTo(x+9,y);ctx.moveTo(x-10,y-28);ctx.lineTo(x+10,y-28);ctx.stroke();}
+}
+
+// ---- 3. speed ----
+function simSpeed(controls,st){
+  let v=0,t=0,dist=0,gas=false,brake=false,trace=[],done=false,scroll=0;
+  holdButton(controls,{id:'gas',label:'Hold: Gas',onChange:on=>gas=on});
+  holdButton(controls,{id:'brake',label:'Hold: Brake',onChange:on=>brake=on});
+  button(controls,'Reset',()=>{v=0;t=0;dist=0;trace=[];done=false;},{id:'reset-speed'});
+  st.setCaption('Hold Gas to speed up, Brake to slow down. The run lasts 20 seconds.');
+  return{
+    draw(ctx,w,h,dt){if(!done){t+=dt;const a=gas?4:brake?-8:-0.5;v=clamp(v+a*dt,0,20);dist+=v*dt;trace.push([t,v]);if(t>=20){done=true;}}
+      scroll=(scroll+v*dt*12)%80;
+      const gy=h*0.6;ctx.fillStyle=TOK.sky;ctx.fillRect(0,0,w,gy);ctx.fillStyle='#55606a';ctx.fillRect(0,gy,w,h*0.26);ctx.fillStyle='#8fbf6b';ctx.fillRect(0,gy+h*0.26,w,h);
+      ctx.fillStyle='#f3e2a5';for(let x=-scroll;x<w;x+=80)ctx.fillRect(x,gy+h*0.13-2,40,4);
+      // car
+      const cx=w*0.3,cy=gy+h*0.13;ctx.fillStyle=TOK.coral;ctx.beginPath();ctx.roundRect(cx-40,cy-22,80,24,8);ctx.fill();ctx.beginPath();ctx.roundRect(cx-22,cy-40,44,22,8);ctx.fill();circle(ctx,cx-22,cy+2,9,TOK.ink);circle(ctx,cx+22,cy+2,9,TOK.ink);
+      if(gas)for(let i=0;i<3;i++){ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillRect(cx-70-i*16,cy-16+i*5,10,3);}
+      // speedometer
+      const sx=w-70,sy=58,r=42;ctx.fillStyle=TOK.panel;circle(ctx,sx,sy,r,TOK.panel,TOK.line);ctx.strokeStyle=TOK.muted;ctx.lineWidth=2;for(let i=0;i<=20;i+=5){const a=Math.PI*(1+i/20);ctx.beginPath();ctx.moveTo(sx+Math.cos(a)*r*0.78,sy+Math.sin(a)*r*0.78);ctx.lineTo(sx+Math.cos(a)*r*0.95,sy+Math.sin(a)*r*0.95);ctx.stroke();}
+      const na=Math.PI*(1+v/20);ctx.strokeStyle=TOK.coral;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+Math.cos(na)*r*0.8,sy+Math.sin(na)*r*0.8);ctx.stroke();label(ctx,fmt(v,0)+' m/s',sx,sy+18,{size:12,mono:true});
+      label(ctx,'distance '+fmt(dist,0)+' m',12,24,{align:'left',size:15,mono:true});stopwatch(ctx,sx-60,24,Math.min(t,20),!done);
+      st.setCaption(done?`Run over. You drove ${fmt(dist,0)} m. That is the shaded area under your line. Reset to drive again.`:gas?'Speeding up: the line climbs.':brake?'Slowing down: the line falls.':v>0.5?'Coasting: the line drifts down slowly as the road rubs.':'Hold Gas to speed up, Brake to slow down. The run lasts 20 seconds.');},
+    drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:'time (s)',yl:'speed (m/s)',xmin:0,xmax:20,ymin:0,ymax:20,xstep:5,ystep:5});g.clip();g.area(trace,TOK.s1Soft);g.line(trace,TOK.s1,{width:3});g.unclip();if(trace.length>10){const p=trace[Math.floor(trace.length*0.5)];label(ctx,'area = '+fmt(dist,0)+' m',g.px(p[0]),g.py(p[1]/2),{size:12,color:TOK.ink,weight:800});}}
+  };
+}
+
+// ---- 4. drop ----
+function simDrop(controls,st,data){
+  let H=2,y=0,v=0,t=0,falling=false,landed=false,slow=false,view='h',pts=[],vtrace=[];
+  const tbl=dataTable(data,['Drop height (m)','Time to land (s)']);
+  slider(controls,{id:'height',label:'Drop height',lo:'1 m',hi:'5 m',min:1,max:5,step:0.5,value:H,onInput:v=>{H=v;if(!falling){y=0;landed=false;}}});
+  button(controls,'Drop',()=>{y=0;v=0;t=0;falling=true;landed=false;vtrace=[];},{primary:true,id:'drop'});
+  toggle(controls,{id:'slow',label:'Slow motion',onChange:v=>slow=v});
+  seg(controls,{id:'view',label:'Graph',options:[{v:'h',l:'Height vs time'},{v:'v',l:'Speed vs time (last drop)'}],value:'h',onChange:v=>view=v});
+  button(controls,'Clear table',()=>{pts=[];tbl.clear();},{id:'clear-drop'});
+  st.setCaption('Pick a height and tap Drop. The stopwatch stops when the ball lands.');
+  return{
+    draw(ctx,w,h,dt){if(falling){const d=dt*(slow?0.25:1);t+=d;v+=9.81*d;y+=v*d;vtrace.push([t,v]);if(y>=H){y=H;falling=false;landed=true;pts.push([H,t]);tbl.add([fmt(H,1),fmt(t,2)]);}}
+      const top=h*0.1,ground=h*0.88,scale=(ground-top)/5;const gy=ground;
+      ctx.fillStyle=TOK.sky;ctx.fillRect(0,0,w,gy);ctx.fillStyle='#8fbf6b';ctx.fillRect(0,gy,w,h-gy);
+      // tape
+      const tx=w*0.22;ctx.fillStyle='#f3e2a5';ctx.fillRect(tx-14,top-6,28,ground-top+6);ctx.strokeStyle=TOK.ink;ctx.lineWidth=1.5;for(let i=0;i<=50;i++){const Y=ground-i*scale/10;const big=i%10===0;ctx.beginPath();ctx.moveTo(tx-14,Y);ctx.lineTo(tx-14+(big?14:i%5===0?9:5),Y);ctx.stroke();if(big)label(ctx,(i/10)+' m',tx+4,Y,{size:11,align:'left',mono:true});}
+      // platform
+      const py=ground-H*scale;ctx.fillStyle='#7a5a3a';ctx.fillRect(w*0.4,py,w*0.22,8);ctx.fillRect(w*0.6,py,6,ground-py);
+      const bx=w*0.5,by=ground-(H-y)*scale-12;circle(ctx,bx,by,12,TOK.coral,TOK.ink);
+      if(falling||landed){ctx.strokeStyle=TOK.coral;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(bx,py);ctx.lineTo(bx,by);ctx.stroke();ctx.setLineDash([]);}
+      stopwatch(ctx,w-12,24,t,falling);label(ctx,(slow?'slow motion · ':'')+fmt(v,1)+' m/s',12,24,{align:'left',size:14,mono:true,color:TOK.ink});
+      const one=pts.find(p=>p[0]===1),four=pts.find(p=>p[0]===4);
+      st.setCaption(one&&four?`From 1 m: ${fmt(one[1],2)} s. From 4 m: ${fmt(four[1],2)} s. Four times the height, about twice the time.`:landed?`Landed after ${fmt(t,2)} s from ${fmt(H,1)} m. The ball was going ${fmt(v,1)} m/s when it hit.`:falling?'Falling...':'Pick a height and tap Drop. The stopwatch stops when the ball lands.');},
+    drawGraph(ctx,w,h){if(view==='h'){const g=graph(ctx,w,h,{xl:'drop height (m)',yl:'time to land (s)',xmin:0,xmax:5,ymin:0,ymax:1.2,xstep:1,ystep:0.3});g.clip();pts.forEach(p=>g.point(p[0],p[1],TOK.s1,6));g.unclip();if(pts.length)g.tag(pts[pts.length-1][0],pts[pts.length-1][1],'your drops',TOK.s1,-8,-10,'right');}
+      else{const g=graph(ctx,w,h,{xl:'time since let go (s)',yl:'speed (m/s)',xmin:0,xmax:1.2,ymin:0,ymax:12,xstep:0.3,ystep:3});g.clip();g.line(vtrace,TOK.s1,{width:3});g.unclip();if(vtrace.length>2){const p=vtrace[vtrace.length-1];g.tag(p[0],p[1],'last drop',TOK.s1,-8,-10,'right');}}}
+  };
+}
+
+// ---- 5. spring ----
+function simSpring(controls,st,data){
+  let load=0,maxLoad=0,shown=0,settle=0,pts=[];
+  const tbl=dataTable(data,['Weight (g)','Stretch (cm)']);
+  function stretchFor(m,mx){const base=m*0.02;const over=Math.max(0,m-600)*0.04;const set=Math.max(0,mx-600)*0.015;return base+over+set;}
+  button(controls,'Add 100 g',()=>{if(load<800){load+=100;maxLoad=Math.max(maxLoad,load);settle=0.7;}},{primary:true,id:'add'});
+  button(controls,'Take 100 g off',()=>{if(load>0){load-=100;settle=0.7;}},{id:'remove'});
+  button(controls,'New spring',()=>{load=0;maxLoad=0;pts=[];tbl.clear();},{id:'new-spring'});
+  st.setCaption('Add weight, then read the ruler.');
+  let pending=false;
+  return{
+    draw(ctx,w,h,dt){const target=stretchFor(load,maxLoad);shown+=(target-shown)*Math.min(1,dt*6);if(settle>0){settle-=dt;pending=true;}else if(pending){pending=false;pts.push([load,target]);tbl.add([load,fmt(target,1)]);}
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);
+      const top=h*0.08,px=w*0.42,cmPx=(h*0.82)/40;const natural=10;
+      // ruler 0..40 cm from hook
+      const rx=w*0.62;ctx.fillStyle='#f3e2a5';ctx.fillRect(rx,top-6,30,40*cmPx+12);ctx.strokeStyle=TOK.ink;ctx.lineWidth=1.5;for(let i=0;i<=40;i++){const Y=top+i*cmPx;const big=i%10===0;ctx.beginPath();ctx.moveTo(rx,Y);ctx.lineTo(rx+(big?14:i%5===0?9:5),Y);ctx.stroke();if(big)label(ctx,i+' cm',rx+34,Y,{size:11,align:'left',mono:true});}
+      // hook and spring
+      ctx.fillStyle='#5a6670';ctx.fillRect(px-50,top-12,100,8);
+      const len=(natural+shown)*cmPx;const coils=14;ctx.strokeStyle='#7f8a94';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px,top-4);for(let i=0;i<=coils*8;i++){const u=i/(coils*8);ctx.lineTo(px+Math.sin(u*coils*Math.PI*2)*14,top+u*len);}ctx.stroke();
+      const sy=top+len;ctx.strokeStyle=TOK.coral;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(px,sy);ctx.lineTo(rx,sy);ctx.stroke();ctx.setLineDash([]);
+      // weights
+      const n=load/100;for(let i=0;i<n;i++){ctx.fillStyle=i<6?'#5a6670':'#8a5a3a';ctx.beginPath();ctx.roundRect(px-22,sy+4+i*10,44,9,3);ctx.fill();}
+      // zero mark
+      const zy=top+natural*cmPx;ctx.strokeStyle=TOK.muted;ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(px-30,zy);ctx.lineTo(rx,zy);ctx.stroke();ctx.setLineDash([]);label(ctx,'no weight',px-34,zy,{size:11,align:'right',color:TOK.muted});
+      label(ctx,load+' g',12,24,{align:'left',size:16,mono:true});label(ctx,'stretch '+fmt(shown,1)+' cm',12,46,{align:'left',size:14,mono:true,color:TOK.coral});
+      st.setCaption(maxLoad>600&&load===0?'All the weight is off, but the spring is longer than it was. It has been stretched for good.':load>600?'Past 600 g the spring stretches more than its share. The dots leave the line.':load>0?`Every 100 g adds 2 cm. ${load} g, ${fmt(stretchFor(load,maxLoad),1)} cm.`:'Add weight, then read the ruler.');},
+    drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:'weight (g)',yl:'stretch (cm)',xmin:0,xmax:800,ymin:0,ymax:32,xstep:200,ystep:8});g.clip();g.line([[0,0],[600,12]],TOK.muted,{dash:[4,4],width:1.5});g.line(pts,TOK.s1,{width:2});pts.forEach(p=>g.point(p[0],p[1],TOK.s1,5));g.unclip();g.tag(300,6,'straight so far',TOK.muted,10,16,'left');}
+  };
+}
+
+// ---- 6. pendulum ----
+function simPendulum(controls,st,data){
+  let L=1,mass='light',amp=10,theta0=10*Math.PI/180,timing=false,count=0,tt=0,tOut=0,pts=[],phase=0;
+  const tbl=dataTable(data,['Length (m)','Bob','Swing','Time per swing (s)']);
+  slider(controls,{id:'len',label:'String length',lo:'0.2 m',hi:'2 m',min:0.2,max:2,step:0.1,value:L,onInput:v=>{L=v;}});
+  seg(controls,{id:'mass',label:'Bob',options:[{v:'light',l:'Light'},{v:'heavy',l:'Heavy'}],value:mass,onChange:v=>mass=v});
+  seg(controls,{id:'amp',label:'Swing',options:[{v:10,l:'Small'},{v:30,l:'Big'}],value:amp,onChange:v=>{amp=v;theta0=v*Math.PI/180;}});
+  button(controls,'Time 3 swings',()=>{if(!timing){timing=true;count=0;tt=0;phase=0;}},{primary:true,id:'time3'});
+  button(controls,'Clear table',()=>{pts=[];tbl.clear();},{id:'clear-pend'});
+  st.setCaption('Set a length and tap Time 3 swings.');
+  const period=()=>2*Math.PI*Math.sqrt(L/9.81)*(1+theta0*theta0/16);
+  return{
+    draw(ctx,w,h,dt){const T=period();phase+=dt/T;if(timing){tt+=dt;if(phase>=3){timing=false;tOut=tt/3;pts.push([L,tOut,mass,amp]);tbl.add([fmt(L,1),mass,amp===10?'small':'big',fmt(tOut,2)]);}}
+      const th=theta0*Math.cos(phase*Math.PI*2);const px=w*0.5,py=h*0.06,len=L/2*(h*0.78);
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);ctx.fillStyle='#5a6670';ctx.fillRect(px-50,py-8,100,8);
+      const bx=px+Math.sin(th)*len,by=py+Math.cos(th)*len;ctx.strokeStyle=TOK.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(bx,by);ctx.stroke();
+      circle(ctx,bx,by,mass==='light'?10:18,mass==='light'?TOK.amber:'#5a6670',TOK.ink);
+      ctx.strokeStyle=TOK.muted;ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,py+len+10);ctx.stroke();ctx.setLineDash([]);
+      label(ctx,fmt(L,1)+' m',px+14,py+len/2,{size:13,mono:true,align:'left'});
+      stopwatch(ctx,w-12,24,timing?tt:tOut*3,timing);label(ctx,timing?`swing ${Math.min(3,Math.floor(phase)+1)} of 3`:'',12,24,{align:'left',size:13,color:TOK.coral});
+      st.setCaption(timing?'Timing... count the swings with it.':pts.length?`Last: ${fmt(pts[pts.length-1][1],2)} s per swing at ${fmt(pts[pts.length-1][0],1)} m with a ${pts[pts.length-1][2]} bob, ${pts[pts.length-1][3]===10?'small':'big'} swing.`:'Set a length and tap Time 3 swings.');},
+    drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:'length (m)',yl:'time per swing (s)',xmin:0,xmax:2,ymin:0,ymax:3,xstep:0.5,ystep:1});g.clip();pts.forEach(p=>g.point(p[0],p[1],TOK.s1,p[2]==='heavy'?8:5,p[3]===10));g.unclip();
+      label(ctx,'● small swing  ○ big swing  ·  big dot = heavy bob',g.ml+g.pw/2,g.mt+10,{size:11,color:TOK.muted,weight:700});}
+  };
+}
+
+// ---- 7. heat ----
+function simHeat(controls,st){
+  let T=-20,melt=0,boil=0,on=false,power=1,t=0,trace=[];
+  const burner=toggle(controls,{id:'burner',label:'Burner off',onChange:v=>{on=v;burner.textContent=v?'Burner on':'Burner off';}});
+  seg(controls,{id:'power',label:'Power',options:[{v:'low',l:'Low'},{v:'high',l:'High'}],value:'low',onChange:v=>power=v==='high'?2.2:1});
+  button(controls,'Start again with ice',()=>{T=-20;melt=0;boil=0;t=0;trace=[];},{id:'reset-heat'});
+  st.setCaption('Turn the burner on and watch the thermometer.');
+  const phase=()=>T<0?'ice':T===0&&melt<1?'melting':T<100?'water':boil<1?'boiling':'boiled away';
+  return{
+    draw(ctx,w,h,dt){if(on&&t<120){t+=dt;const P=power;const ph=phase();
+        if(ph==='ice'){T=Math.min(0,T+P*2.5*dt);}else if(ph==='melting'){melt=Math.min(1,melt+P*0.08*dt);}else if(ph==='water'){T=Math.min(100,T+P*2.2*dt);}else if(ph==='boiling'){boil=Math.min(1,boil+P*0.03*dt);}
+        trace.push([t,T]);}
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);const ph=phase();
+      // stove
+      const sx=w*0.35,sy=h*0.86;ctx.fillStyle='#5a6670';ctx.fillRect(sx-70,sy,140,10);if(on){for(let i=0;i<6;i++){ctx.fillStyle=power>1?'rgba(240,120,40,.9)':'rgba(240,160,60,.7)';ctx.beginPath();ctx.ellipse(sx-50+i*20,sy-6,6,power>1?14:8,0,0,Math.PI*2);ctx.fill();}}
+      // pot (glass)
+      const pw=110,phh=h*0.42,px=sx-pw/2,py=sy-10-phh;ctx.fillStyle='rgba(255,255,255,.25)';ctx.fillRect(px,py,pw,phh);
+      const waterFrac=(ph==='ice'?0:ph==='melting'?melt:1)*(1-boil)*0.75;ctx.fillStyle='rgba(70,150,210,.6)';ctx.fillRect(px,py+phh*(1-waterFrac),pw,phh*waterFrac);
+      if(ph==='ice'||ph==='melting'){ctx.fillStyle='rgba(220,240,255,.95)';const n=Math.ceil(8*(1-melt));for(let i=0;i<n;i++){ctx.fillRect(px+8+(i%4)*25,py+phh-24-Math.floor(i/4)*24,20,20);}}
+      if(ph==='boiling'||ph==='boiled away'){for(let i=0;i<8;i++){const u=((t*0.7+i*0.37)%1);circle(ctx,px+12+i*12,py+phh-10-u*phh*0.6,3+u*2,'rgba(255,255,255,.7)');}ctx.strokeStyle='rgba(200,200,200,.6)';ctx.lineWidth=3;for(let i=0;i<3;i++){ctx.beginPath();const bx=px+30+i*25;ctx.moveTo(bx,py-4);ctx.quadraticCurveTo(bx+8,py-24-((t*20+i*10)%20),bx,py-44);ctx.stroke();}}
+      ctx.strokeStyle=TOK.ink;ctx.lineWidth=2;ctx.strokeRect(px,py,pw,phh);
+      // thermometer
+      const tx=w*0.78,tTop=h*0.2,tBot=h*0.84;ctx.fillStyle=TOK.panel;ctx.beginPath();ctx.roundRect(tx-10,tTop,20,tBot-tTop,10);ctx.fill();ctx.strokeStyle=TOK.line;ctx.stroke();
+      const frac=(T+20)/140;ctx.fillStyle=TOK.coral;ctx.fillRect(tx-4,tBot-10-(tBot-tTop-20)*frac,8,(tBot-tTop-20)*frac+4);circle(ctx,tx,tBot-2,14,TOK.coral);
+      for(const v of[-20,0,20,40,60,80,100,120]){const Y=tBot-10-(tBot-tTop-20)*(v+20)/140;ctx.strokeStyle=TOK.muted;ctx.beginPath();ctx.moveTo(tx+12,Y);ctx.lineTo(tx+18,Y);ctx.stroke();label(ctx,v+'°',tx+22,Y,{size:10,align:'left',mono:true,color:TOK.muted});}
+      label(ctx,fmt(T,0)+' °C',12,24,{align:'left',size:18,mono:true});label(ctx,ph,12,48,{align:'left',size:14,color:TOK.coral});stopwatch(ctx,w-12,24,t,on&&t<120);
+      st.setCaption(!on?'Turn the burner on and watch the thermometer.':ph==='ice'?'Warming the ice. The line climbs.':ph==='melting'?'Melting. The burner is on but the thermometer is stuck at 0. All the heat is going into un-freezing.':ph==='water'?'All melted. The line climbs again.':ph==='boiling'?'Boiling. Stuck at 100 while the water turns to steam, no matter how hard the burner works.':'The water has boiled away. Start again with ice to see it once more.');},
+    drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:'time (s)',yl:'temperature (°C)',xmin:0,xmax:120,ymin:-20,ymax:120,xstep:30,ystep:20});g.hline(0,TOK.muted);g.hline(100,TOK.muted);g.clip();g.line(trace,TOK.s1,{width:3});g.unclip();g.tag(120,0,'melting',TOK.muted,-6,-8,'right');g.tag(120,100,'boiling',TOK.muted,-6,-8,'right');}
+  };
+}
+
+// ---- 8. dunk ----
+function simDunk(controls,st,data){
+  const KINDS=[{n:'duck',g:40,ml:130,c:'#f2c230'},{n:'wood block',g:72,ml:120,c:'#b8864f'},{n:'cork',g:12,ml:50,c:'#d8b48a'},{n:'candle',g:45,ml:50,c:'#f3ead8'},{n:'apple',g:90,ml:105,c:'#d84a3a'},{n:'ice cube',g:46,ml:50,c:'#cfe9f3'},{n:'egg',g:55,ml:53,c:'#f0e4c8'},{n:'plum',g:66,ml:60,c:'#7a4b9c'},{n:'rubber ball',g:110,ml:100,c:'#3b6fd1'},{n:'stone',g:135,ml:50,c:'#777d86'},{n:'key',g:23,ml:3,c:'#c7a84a'}];
+  let cur=null,ph=0,pts=[];
+  const tbl=dataTable(data,['Thing','Weight (g)','Space (mL)','Result']);
+  const picker=el('div',{class:'seg'},el('span',{class:'lab'},'Measure'));const row=el('div',{class:'row'});KINDS.forEach(k=>{const b=el('button',{type:'button',id:'m-'+k.n.replace(/\s/g,'-')},k.n);b.addEventListener('click',()=>{cur=k;ph=0;});row.append(b);});picker.append(row);controls.append(picker);
+  button(controls,'Clear',()=>{pts=[];cur=null;tbl.clear();},{id:'clear-dunk'});
+  st.setCaption('Tap a thing. It gets weighed, then dunked, then plotted.');
+  return{
+    draw(ctx,w,h,dt){if(cur){const was=ph;ph=Math.min(3,ph+dt*0.8);if(was<2.2&&ph>=2.2&&!pts.some(p=>p.k===cur)){pts.push({k:cur});tbl.add([cur.n,cur.g,cur.ml,cur.g>cur.ml?'sinks':'floats']);}}
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);const base=h*0.86;
+      // scale
+      const scx=w*0.18;ctx.fillStyle='#5a6670';ctx.beginPath();ctx.roundRect(scx-46,base-30,92,30,6);ctx.fill();ctx.fillStyle=TOK.panel;ctx.fillRect(scx-30,base-24,60,16);
+      const onScale=cur&&ph<1.2;label(ctx,onScale?fmt(cur.g*Math.min(1,ph/0.6),0)+' g':'0 g',scx,base-16,{size:12,mono:true,color:TOK.ink});
+      // jug
+      const jx=w*0.5,jw=70,jh=h*0.62,jy=base-jh;ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillRect(jx-jw/2,jy,jw,jh);
+      const inJug=cur&&ph>=1.2;const rise=inJug?cur.ml*Math.min(1,(ph-1.2)/0.8):0;const lvl=(150+rise)/300;ctx.fillStyle='rgba(70,150,210,.6)';ctx.fillRect(jx-jw/2,base-jh*lvl,jw,jh*lvl);
+      ctx.strokeStyle=TOK.ink;ctx.lineWidth=2;ctx.strokeRect(jx-jw/2,jy,jw,jh);for(let m=0;m<=300;m+=50){const Y=base-jh*m/300;ctx.beginPath();ctx.moveTo(jx+jw/2,Y);ctx.lineTo(jx+jw/2+8,Y);ctx.stroke();label(ctx,m+' mL',jx+jw/2+12,Y,{size:10,align:'left',mono:true,color:TOK.muted});}
+      label(ctx,fmt(150+rise,0)+' mL',jx,jy-12,{size:12,mono:true});
+      // the thing
+      if(cur){const sinks=cur.g>cur.ml;const size=10+Math.sqrt(cur.ml)*2;let ox,oy;
+        if(ph<1.2){ox=scx;oy=base-30-size/2;}else{const u=Math.min(1,(ph-1.2)/0.8);ox=lerp(scx,jx,Math.min(1,u*2));const topY=base-jh*lvl;const restY=sinks?base-size/2:topY+size*(1-(1-cur.g/cur.ml))-size/2;oy=lerp(base-30-size/2,restY,u);}
+        ctx.fillStyle=cur.c;ctx.beginPath();ctx.roundRect(ox-size/2,oy-size/2,size,size,size/4);ctx.fill();ctx.strokeStyle=TOK.ink;ctx.lineWidth=1.5;ctx.stroke();label(ctx,cur.n,ox,oy-size/2-10,{size:11,weight:700});}
+      label(ctx,cur&&ph>=2.2?(cur.g>cur.ml?cur.n+' sinks':cur.n+' floats'):cur?(ph<1.2?'weighing...':'dunking...'):'',w*0.82,base-jh/2,{size:13,color:TOK.coral});
+      if(cur&&ph>=2.2)st.setCaption(`${cur.n}: ${cur.g} g, ${cur.ml} mL. ${cur.g>cur.ml?'More grams than millilitres, so it is above the water line. It sinks.':'Fewer grams than millilitres, so it is below the water line. It floats.'}`);},
+    drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:'space taken (mL)',yl:'weight (g)',xmin:0,xmax:150,ymin:0,ymax:150,xstep:50,ystep:50});g.clip();g.area([[0,0],[150,150]],'rgba(70,150,210,.10)');g.line([[0,0],[150,150]],TOK.s2,{width:2});pts.forEach(p=>{const k=p.k;g.point(k.ml,k.g,TOK.s1,6,k.g>k.ml);});g.unclip();g.tag(150,150,'water line',TOK.s2,-6,10,'right');label(ctx,'● sinks  ○ floats',g.ml+g.pw-6,g.mt+10,{size:11,color:TOK.muted,weight:700,align:'right'});
+      pts.slice(-3).forEach(p=>g.tag(p.k.ml,p.k.g,p.k.n,TOK.ink,8,-8));}
+  };
+}
+
+// ---- 9. sound ----
+function simSound(controls,st){
+  let f=220,loud=0.6,ac=null,t=0,playing=0;
+  slider(controls,{id:'pitch',label:'Pitch',lo:'low (100)',hi:'high (800)',min:100,max:800,step:5,value:f,onInput:v=>f=v});
+  slider(controls,{id:'loud',label:'Loudness',lo:'quiet',hi:'loud',min:0.1,max:1,step:0.05,value:loud,onInput:v=>loud=v});
+  button(controls,'Play the note',()=>{try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.0001,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.4*loud,ac.currentTime+0.02);g.gain.setValueAtTime(0.4*loud,ac.currentTime+0.9);g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+1.1);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+1.15);playing=1.1;}catch(e){}},{primary:true,id:'play'});
+  st.setCaption('Slide the pitch and loudness. The screen redraws the wiggle.');
+  return{
+    draw(ctx,w,h,dt){t+=dt;playing=Math.max(0,playing-dt);
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);
+      // speaker
+      const sx=w*0.22,sy=h*0.5;const vib=Math.sin(t*(4+f/40))*loud*6;ctx.fillStyle='#3a434c';ctx.beginPath();ctx.roundRect(sx-50,sy-60,70,120,10);ctx.fill();circle(ctx,sx+5+vib,sy,36,'#5a6670',TOK.ink);circle(ctx,sx+5+vib,sy,14,'#2b3138');
+      // rings
+      const spacing=lerp(70,16,(f-100)/700);ctx.lineWidth=2;for(let r=30;r<w*0.7;r+=spacing){const rr=r+((t*120)%spacing);ctx.strokeStyle=TOK.teal;ctx.globalAlpha=clamp(loud*(1-rr/(w*0.7)),0,1);ctx.beginPath();ctx.arc(sx+40,sy,rr,-Math.PI/2.4,Math.PI/2.4);ctx.stroke();}ctx.globalAlpha=1;
+      circle(ctx,w*0.88,sy,22,TOK.amber,TOK.ink);circle(ctx,w*0.88,sy,10,TOK.panel,TOK.ink);label(ctx,'ear',w*0.88,sy+40,{size:12,color:TOK.muted});
+      label(ctx,f+' wiggles per second',12,24,{align:'left',size:15,mono:true});label(ctx,'one wiggle takes '+fmt(1000/f,1)+' ms',12,46,{align:'left',size:13,mono:true,color:TOK.coral});
+      if(playing>0)label(ctx,'playing',w-12,24,{align:'right',size:13,color:TOK.coral});
+      st.setCaption(f<200?'Low note: wiggles far apart.':f<450?'Middle note.':'High note: wiggles squashed together.');
+      st.setCaption((f<200?'Low note: the wiggles are spread out.':f<450?'Middle note.':'High note: the wiggles are squashed together.')+(loud>0.75?' Loud: tall wiggles.':loud<0.3?' Quiet: short wiggles, same spacing.':''));},
+    drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:'time (ms)',yl:'push on the ear',xmin:0,xmax:10,ymin:-1,ymax:1,xstep:2,ystep:0.5});g.clip();const pts=[];for(let i=0;i<=300;i++){const ms=i/30;pts.push([ms,loud*Math.sin(ms/1000*f*Math.PI*2)]);}g.line(pts,TOK.s1,{width:2.5});
+      const P=1000/f;g.vline(P*0.25,TOK.s2);g.vline(P*1.25,TOK.s2);g.unclip();label(ctx,'one wiggle: '+fmt(P,1)+' ms',g.px(P*0.75),g.mt+12,{size:11,color:TOK.s2,weight:800});}
+  };
+}
+
+// ---- boot ----
+function route(){const id=location.hash.replace('#','');show(LESSONS.some(L=>L.id===id)?id:LESSONS[0].id);}
+window.addEventListener('hashchange',route);
+route();
+</script>
