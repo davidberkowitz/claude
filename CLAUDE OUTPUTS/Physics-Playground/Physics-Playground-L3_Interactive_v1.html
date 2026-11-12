@@ -1,0 +1,617 @@
+<title>Physics Playground Level 3</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a lab bench. Sticky lesson strip on top; each lesson is picture + big idea, then a two-pane panel: the live scene on the left and its graph on the right (stacked on a phone), measurements table under them, then a three-step formula bench (rule in words, fit the number, predict and test), then try-this and what-you-saw. */
+:root{
+  --bg:#f1f4ef; --panel:#ffffff; --panel2:#e9eee9; --ink:#172529; --muted:#55666b; --line:#d2dbd6;
+  --teal:#0e7c73; --amber:#d99a2b; --coral:#dd5f44; --sky:#bfe0e8;
+  --s1:#0a8f80; --s2:#bf6f00; --s1-soft:rgba(10,143,128,.16);
+  --good:#2a8a4a; --bad:#c2452c;
+  --display:"Fredoka","Trebuchet MS","Segoe UI",sans-serif;
+  --body:"Nunito","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1a1c; --panel:#16252a; --panel2:#1e3035; --ink:#e7efed; --muted:#9db1ad; --line:#2a3d42;
+  --teal:#2cc2b2; --amber:#f0b84e; --coral:#f2816a; --sky:#27515c;
+  --s1:#1fa093; --s2:#c4862a; --s1-soft:rgba(31,160,147,.2);
+  --good:#5ccc82; --bad:#f08a76; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1a1c; --panel:#16252a; --panel2:#1e3035; --ink:#e7efed; --muted:#9db1ad; --line:#2a3d42;
+  --teal:#2cc2b2; --amber:#f0b84e; --coral:#f2816a; --sky:#27515c;
+  --s1:#1fa093; --s2:#c4862a; --s1-soft:rgba(31,160,147,.2);
+  --good:#5ccc82; --bad:#f08a76; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(1.9rem,5vw,2.8rem)}
+h2{font-size:clamp(1.5rem,4vw,2.1rem)}
+h3{font-size:1.1rem}
+p{margin:0;max-width:62ch}
+a{color:var(--teal)}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:22px}
+
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);padding-block:10px 8px;display:grid;gap:8px;border-bottom:1px solid var(--line)}
+.strip .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-weight:700;font-size:1.15rem;display:flex;align-items:center;gap:8px}
+.brand i{width:14px;height:14px;border-radius:50%;background:var(--coral);box-shadow:-18px 0 0 -2px var(--amber),-34px 0 0 -4px var(--teal);margin-left:34px}
+.brand em{font-style:normal;color:var(--muted);font-weight:600;font-size:.9rem}
+.count{font-size:.85rem;color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums}
+.lessons{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.lessons::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px 6px 8px;font:inherit;font-weight:800;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.chip b{width:22px;height:22px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-size:.75rem;color:var(--muted)}
+.chip.done b{background:var(--good);color:#fff}
+.chip[aria-current="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.chip[aria-current="true"] b{background:rgba(255,255,255,.25);color:#fff}
+.chip:focus-visible,button:focus-visible,input:focus-visible,.opt:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+.lesson{display:grid;gap:18px}
+.hero{display:grid;gap:14px;grid-template-columns:1fr;align-items:center}
+@media(min-width:700px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero img{width:100%;max-width:100%;border-radius:18px;aspect-ratio:16/9;object-fit:cover;background:var(--panel2);display:block}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:800}
+.big{font-size:1.15rem;color:var(--muted);font-weight:600}
+.hero .txt{display:grid;gap:10px}
+.intro{grid-template-columns:1fr;gap:14px;padding:0;overflow:hidden}
+.intro img{width:100%;max-width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.intro>div{padding:4px 18px 18px;display:grid;gap:8px}
+@media(min-width:700px){.intro{grid-template-columns:1fr 1fr;align-items:center}.intro img{aspect-ratio:4/3;height:100%}.intro>div{padding:18px}}
+
+.sim{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:grid}
+.panes{display:grid;grid-template-columns:1fr;gap:0}
+@media(min-width:760px){.panes{grid-template-columns:1.25fr 1fr}.panes .gwrap{border-left:1px solid var(--line)}}
+.panes canvas{display:block;width:100%;height:auto;touch-action:none;background:var(--panel2)}
+.stage{cursor:grab}.stage.grabbing{cursor:grabbing}
+.gwrap{display:grid;grid-template-rows:auto 1fr;background:var(--panel)}
+.gwrap .gtitle{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800;padding:8px 12px 0}
+.graph{background:var(--panel)!important}
+.caption{padding:8px 14px;font-size:.9rem;color:var(--muted);font-weight:600;border-top:1px solid var(--line);min-height:38px;display:flex;align-items:center}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;padding:12px 14px;border-top:1px solid var(--line);align-items:end}
+.ctl{display:grid;gap:4px;min-width:0}
+.ctl .lab,.seg .lab,.data .lab{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.ctl input[type=range]{width:min(220px,60vw);accent-color:var(--teal)}
+.ctl .ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);font-weight:700}
+.seg{display:grid;gap:4px}
+.seg .row{display:flex;flex-wrap:wrap;gap:4px;background:var(--panel2);border-radius:10px;padding:3px}
+.seg button{font:inherit;font-weight:800;font-size:.85rem;border:0;background:transparent;color:var(--ink);padding:6px 11px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.btn{font:inherit;font-weight:800;font-size:.92rem;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.btn.primary{background:var(--coral);border-color:var(--coral);color:#fff}
+.btn.tog[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.hold:active,.btn.hold[data-down="1"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.data{padding:10px 14px 12px;border-top:1px solid var(--line);display:grid;gap:6px}
+.data .tw{overflow-x:auto}
+.data table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+.data th{text-align:left;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 10px 4px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.data td{padding:4px 10px 4px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.85rem;white-space:nowrap}
+.data td:first-child{color:var(--muted)}
+.data .empty{color:var(--muted);font-size:.9rem;font-weight:600}
+
+.two{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:grid;gap:10px;align-content:start;min-width:0}
+.card h3{display:flex;align-items:center;gap:8px}
+.card h3 span{width:10px;height:10px;border-radius:50%;background:var(--amber);flex:0 0 auto}
+.card ul{margin:0;padding-left:1.2em;display:grid;gap:6px}
+.saw{font-size:1rem}
+.opts{display:grid;gap:8px}
+.opt{font:inherit;text-align:left;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;font-weight:600;line-height:1.35}
+.opt[data-state="right"]{border-color:var(--good);background:color-mix(in srgb,var(--good) 16%,var(--panel))}
+.opt[data-state="wrong"]{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--panel))}
+.why{font-size:.95rem;color:var(--muted);font-weight:600;min-height:1.4em}
+.nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+footer{color:var(--muted);font-size:.85rem;display:grid;gap:4px;border-top:1px solid var(--line);padding-top:14px}
+footer p{max-width:none}
+/* formula bench */
+.legend{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px;text-transform:none;letter-spacing:0;font-size:.78rem;font-weight:700;color:var(--muted)}
+.legend .li{display:inline-flex;align-items:center;gap:5px}
+.k.dot{width:10px;height:10px;border-radius:50%;background:var(--s1)}
+.k.line{width:16px;height:3px;border-radius:2px;background:var(--s2)}
+.k.ring{width:10px;height:10px;border-radius:50%;border:2px solid var(--s2)}
+.bench{display:grid;border-top:1px solid var(--line)}
+.bench .step{padding:12px 14px 14px;display:grid;gap:8px;border-bottom:1px solid var(--line);min-width:0}
+.bench .step:last-child{border-bottom:0}
+.bench .lab{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.words{font-weight:600}
+.formula{font-family:var(--mono);font-size:clamp(1.05rem,4.4vw,1.5rem);font-weight:700;background:var(--panel2);border-radius:12px;padding:12px 14px;overflow-x:auto;white-space:nowrap}
+.formula b{color:var(--ink);border-bottom:3px solid var(--s2);padding:0 3px}
+.short{font-size:.88rem;color:var(--muted);font-weight:600}
+#fit{width:100%;max-width:440px;accent-color:var(--s2)}
+.fitmsg{font-size:.92rem;font-weight:800;color:var(--muted)}
+.fitmsg[data-state="good"]{color:var(--good)}
+.predrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.predrow input{font:inherit;font-family:var(--mono);font-weight:700;width:7em;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
+.unit{font-weight:800;color:var(--muted);margin-right:6px}
+.work{font-family:var(--mono);font-size:.95rem;min-height:1.3em}
+.result{font-weight:700;min-height:1.4em}
+.result[data-state="right"]{color:var(--good)}
+.result[data-state="wrong"]{color:var(--bad)}
+/* narration */
+.listen{display:inline-flex;align-items:center;gap:6px;font:inherit;font-weight:800;font-size:.82rem;border:1px solid var(--line);background:var(--panel2);color:var(--teal);padding:5px 12px 5px 9px;border-radius:999px;cursor:pointer;justify-self:start;white-space:nowrap;flex:0 0 auto}
+.listen svg{flex:0 0 auto}
+.listen[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sayrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sayhint{font-size:.8rem;color:var(--muted);font-weight:600}
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto!important} }
+</style>
+
+<div class="wrap">
+  <div class="strip">
+    <div class="top">
+      <div class="brand"><i></i>Physics Playground <em>Level 3</em></div>
+      <div class="count" id="count"></div>
+    </div>
+    <div class="lessons" id="lessons" role="tablist" aria-label="Lessons"></div>
+  </div>
+  <section class="lesson" id="lesson" aria-live="polite"></section>
+  <footer>
+    <p><strong>Physics Playground, Level 3</strong> by David Berkowitz, with research from Anthropic Claude, images from Google Gemini Nano Banana and narration from Google Gemini text-to-speech. Eight lessons that turn your measurements into formulas. Earlier levels: <a href="https://claude.ai/artifact/PTzxi4b6AHsBdkhferfwpg">Level 1</a> and <a href="https://claude.ai/artifact/5krBuLDXAgTaoudehPhVbV">Level 2</a>.</p>
+    <p>Your progress is saved only on this device.</p>
+  </footer>
+</div>
+
+<script>
+'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+function el(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='html')e.innerHTML=v;else e.setAttribute(k,v);}for(const k of kids){if(k==null)continue;e.append(k.nodeType?k:document.createTextNode(k));}return e;}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const fmt=(v,d=1)=>Number(v).toFixed(d);
+let TOK={};function readTokens(){const cs=getComputedStyle(document.documentElement);TOK={};for(const k of['bg','panel','panel2','ink','muted','line','teal','amber','coral','sky','s1','s2','s1-soft','good','bad'])TOK[k.replace('-soft','Soft')]=cs.getPropertyValue('--'+k).trim();}
+readTokens();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readTokens);
+new MutationObserver(readTokens).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---- controls ----
+function slider(parent,{id,label,lo,hi,min=0,max=1,step=0.01,value,onInput}){
+  const inp=el('input',{type:'range',id,min,max,step,value});
+  parent.append(el('div',{class:'ctl'},el('label',{class:'lab',for:id},label),inp,el('div',{class:'ends'},el('span',{},lo),el('span',{},hi))));
+  inp.addEventListener('input',()=>onInput(+inp.value));return inp;
+}
+function seg(parent,{id,label,options,value,onChange}){
+  const row=el('div',{class:'row',role:'group','aria-label':label});
+  const btns=options.map(o=>{const b=el('button',{type:'button',id:id+'-'+o.v,'aria-pressed':String(o.v===value)},o.l);b.addEventListener('click',()=>{btns.forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');onChange(o.v);});return b;});
+  row.append(...btns);parent.append(el('div',{class:'seg'},el('span',{class:'lab'},label),row));
+  return {set(v){btns.forEach(x=>x.setAttribute('aria-pressed',String(x.id===id+'-'+v)));}};
+}
+function button(parent,label,onClick,{primary=false,id}={}){const b=el('button',{type:'button',class:'btn'+(primary?' primary':''),id:id||('b-'+label.replace(/\W+/g,'-').toLowerCase())},label);b.addEventListener('click',onClick);parent.append(b);return b;}
+function toggle(parent,{id,label,checked=false,onChange}){const b=el('button',{type:'button',class:'btn tog',id,'aria-pressed':String(checked)},label);b.addEventListener('click',()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));onChange(on);});parent.append(b);return b;}
+function holdButton(parent,{id,label,onChange}){const b=el('button',{type:'button',class:'btn hold',id},label);let down=false;const set=v=>{if(down===v)return;down=v;b.dataset.down=v?'1':'';onChange(v);};
+  b.addEventListener('pointerdown',e=>{b.setPointerCapture(e.pointerId);set(true);});['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>set(false)));
+  b.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();set(true);}});b.addEventListener('keyup',()=>set(false));b.addEventListener('blur',()=>set(false));parent.append(b);return b;}
+function dataTable(host,cols,{label='Measurements',empty='Nothing measured yet.'}={}){
+  const tw=el('div',{class:'tw'});host.append(el('span',{class:'lab'},label),tw);const rows=[];
+  function render(){tw.innerHTML='';if(!rows.length){tw.append(el('p',{class:'empty'},empty));return;}
+    const t=el('table',{},el('thead',{},el('tr',{},...cols.map(c=>el('th',{},c)))),el('tbody',{},...rows.map(r=>el('tr',{},...r.map(v=>el('td',{},String(v)))))));tw.append(t);}
+  render();return{rows,add(r){rows.push(r);if(rows.length>10)rows.shift();render();},clear(){rows.length=0;render();}};
+}
+
+// ---- drawing ----
+function circle(ctx,x,y,r,fill,stroke,lw=2){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}}
+function label(ctx,text,x,y,{size=14,color,align='center',weight=800,mono=false,base='middle'}={}){ctx.font=`${weight} ${size}px ${mono?'"JetBrains Mono", Menlo, monospace':'Nunito, sans-serif'}`;ctx.fillStyle=color||TOK.ink;ctx.textAlign=align;ctx.textBaseline=base;ctx.fillText(text,x,y);}
+function stopwatch(ctx,x,y,t,running){ // a readout, right-aligned at x
+  ctx.fillStyle=TOK.panel;ctx.strokeStyle=running?TOK.coral:TOK.line;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x-108,y-16,108,32,8);ctx.fill();ctx.stroke();
+  label(ctx,fmt(t,2)+' s',x-10,y,{align:'right',size:16,mono:true,color:TOK.ink});circle(ctx,x-94,y,5,running?TOK.coral:TOK.muted);}
+function niceStep(range,target){const raw=range/target;const p=Math.pow(10,Math.floor(Math.log10(raw)));const n=raw/p;return (n<1.5?1:n<3?2:n<7?5:10)*p;}
+function graph(ctx,w,h,o){
+  const ml=o.ml||48,mr=12,mt=12,mb=34;const pw=w-ml-mr,ph=h-mt-mb;
+  const px=x=>ml+(x-o.xmin)/(o.xmax-o.xmin)*pw,py=y=>mt+ph-(y-o.ymin)/(o.ymax-o.ymin)*ph;
+  ctx.fillStyle=TOK.panel;ctx.fillRect(0,0,w,h);
+  const xs=o.xstep||niceStep(o.xmax-o.xmin,5),ys=o.ystep||niceStep(o.ymax-o.ymin,4);
+  ctx.strokeStyle=TOK.line;ctx.lineWidth=1;
+  for(let x=o.xmin;x<=o.xmax+1e-9;x+=xs){const X=px(x);ctx.beginPath();ctx.moveTo(X,mt);ctx.lineTo(X,mt+ph);ctx.stroke();label(ctx,String(+x.toFixed(2)),X,mt+ph+10,{size:11,color:TOK.muted,weight:700,mono:true});}
+  for(let y=o.ymin;y<=o.ymax+1e-9;y+=ys){const Y=py(y);ctx.beginPath();ctx.moveTo(ml,Y);ctx.lineTo(ml+pw,Y);ctx.stroke();label(ctx,String(+y.toFixed(2)),ml-6,Y,{size:11,color:TOK.muted,weight:700,align:'right',mono:true});}
+  ctx.strokeStyle=TOK.muted;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
+  label(ctx,o.xl,ml+pw/2,h-6,{size:12,color:TOK.muted,weight:800});
+  ctx.save();ctx.translate(12,mt+ph/2);ctx.rotate(-Math.PI/2);label(ctx,o.yl,0,0,{size:12,color:TOK.muted,weight:800});ctx.restore();
+  return{px,py,ml,mt,pw,ph,
+    clip(){ctx.save();ctx.beginPath();ctx.rect(ml,mt,pw,ph);ctx.clip();},unclip(){ctx.restore();},
+    point(x,y,c,r=5,ring=true){circle(ctx,px(x),py(y),r,ring?c:TOK.panel,ring?TOK.panel:c,2);},
+    line(pts,c,{dash,width=2.5}={}){if(pts.length<2)return;ctx.strokeStyle=c;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash||[]);ctx.beginPath();pts.forEach((p,i)=>ctx[i?'lineTo':'moveTo'](px(p[0]),py(p[1])));ctx.stroke();ctx.setLineDash([]);},
+    area(pts,c){if(pts.length<2)return;ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(px(pts[0][0]),py(o.ymin));pts.forEach(p=>ctx.lineTo(px(p[0]),py(p[1])));ctx.lineTo(px(pts[pts.length-1][0]),py(o.ymin));ctx.closePath();ctx.fill();},
+    vline(x,c){ctx.strokeStyle=c;ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(px(x),mt);ctx.lineTo(px(x),mt+ph);ctx.stroke();ctx.setLineDash([]);},
+    hline(y,c){ctx.strokeStyle=c;ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(ml,py(y));ctx.lineTo(ml+pw,py(y));ctx.stroke();ctx.setLineDash([]);},
+    tag(x,y,text,c,dx=8,dy=-10,align='left'){label(ctx,text,px(x)+dx,py(y)+dy,{size:12,color:c,align});}};
+}
+
+// ---- lessons ----
+// Every lesson is the same loop: measure dots, say the rule in words, fit one number so the formula's line runs through the dots, then predict a new case and test it.
+const LESSONS=[
+{id:'speed',title:'Speed is a number',big:'In Level 2 the train drew a straight line of dots. A formula is that line written down, so you can carry it around.',
+ img:'img3/speed.jpg',alt:'A red toy train passing evenly spaced flags while a robot clicks a stopwatch',
+ gtitle:'Distance (m) against time (s)',xl:'time (s)',yl:'distance (m)',xmax:7,ymax:10,xstep:1,ystep:2,xd:0,yd:1,
+ words:'The train covers the same distance every second. So the distance is the speed, times how long it has been going.',
+ say:'As a formula: distance equals speed times time.',
+ formula:{html:c=>`distance = <b>${c}</b> × time`,f:(x,c)=>c*x,min:0.5,max:4,step:0.1,start:1,cd:1,short:'Scientists write d = v × t. Your number v is the speed, in metres per second.',work:(c,y)=>`${c} × 3.5 = ${y}`},
+ predict:{q:'Where will the train be at 3.5 seconds?',x:3.5,unit:'m'},
+ tryList:['Pick a train and tap Start. It records a dot every second.','Slide the number until the line runs through your dots. That number is the speed of the train.','Use your formula to predict where the train will be at 3.5 seconds, then tap Test it.','Switch trains and do it again. Only the number changes.'],
+ saw:'One short formula holds every dot you measured, and all the ones you did not. The number in it, metres per second, is the speed. Different trains have different numbers but the same formula. That is what a formula is for: measure a little, then know the rest without measuring.',
+ sim:simTrain},
+{id:'spring',title:'A spring you can trust',big:'Each extra pull stretches the spring by the same amount. Find that amount and the spring becomes a measuring tool.',
+ img:'img3/spring.jpg',alt:'A spring scale holding a paper bag while a child reads the pointer',
+ gtitle:'Stretch (cm) against pull (N)',xl:'pull (newtons)',yl:'stretch (cm)',xmax:7,ymax:24,xstep:1,ystep:4,xd:1,yd:1,
+ words:'Every newton of pull adds the same stretch. So the stretch is that amount, times the pull.',
+ say:'As a formula: stretch equals a number times the pull.',
+ formula:{html:c=>`stretch = <b>${c}</b> × pull`,f:(x,c)=>c*x,min:0.5,max:5,step:0.1,start:1,cd:1,short:'Your number is centimetres of stretch for each newton. This is Hooke\'s law.',work:(c,y)=>`${c} × 4.5 = ${y}`},
+ predict:{q:'A mystery bag pulls with 4.5 newtons. How far will the spring stretch?',x:4.5,unit:'cm'},
+ tryList:['Hang weights one at a time. Each one pulls down with 1 newton, about the weight of an apple.','Fit the number to your dots.','A mystery bag pulls with 4.5 newtons. Predict the stretch, then test it.','Try the other spring. A stiffer spring has a smaller number.'],
+ saw:'The number you found is centimetres of stretch per newton. Once you know it, the spring is a scale: read the stretch, and the formula tells you the pull. This is how kitchen scales and bathroom scales work. Robert Hooke wrote the rule down in 1660, and it carries his name.',
+ sim:simSpring},
+{id:'density',title:'The packing number',big:'Blocks of the same stuff line up on the graph. The steepness of that line is how tightly the stuff is packed.',
+ img:'img3/density.jpg',alt:'Three same-size cubes in a water tank: wood floating high, wax floating low, rubber on the bottom',
+ gtitle:'Weight (g) against size (mL)',xl:'size (mL)',yl:'weight (g)',xmax:120,ymax:160,xstep:20,ystep:40,xd:0,yd:0,
+ words:'Twice as much of the same stuff weighs twice as much. So the weight is a packing number, times the size.',
+ say:'As a formula: weight equals the packing number times the size.',
+ formula:{html:c=>`weight = <b>${c}</b> × size`,f:(x,c)=>c*x,min:0.1,max:2,step:0.05,start:0.2,cd:2,short:'Scientists call the packing number density, and write density = mass ÷ volume.',work:(c,y)=>`${c} × 70 = ${y}`},
+ predict:{q:'How much will a 70 millilitre block weigh?',x:70,unit:'g'},
+ tryList:['Pick a material. Weigh blocks of different sizes.','Fit the number. It is grams per millilitre.','Predict the weight of a 70 millilitre block, then test it.','Compare materials. Which numbers are below 1, and what do those blocks do in the water?'],
+ saw:'The number is called density: the grams in each millilitre. The density of water is 1. A material with a number below 1 floats, and above 1 sinks, whatever the size of the block. A floating block even sinks in to exactly its density: pine, at 0.5, sits half under. Scientists call the grams mass, and they write density equals mass divided by volume.',
+ sim:simDensity},
+{id:'seesaw',title:'Balance a seesaw',big:'A small weight far from the middle can balance a big weight close in. There is an exact rule for where.',
+ img:'img3/seesaw.jpg',alt:'An elephant near the middle of a seesaw balanced by a mouse far out at the other end',
+ gtitle:'Balance distance (cm) against weights',xl:'weights on the right',yl:'distance (cm)',xmax:9,ymax:100,xstep:1,ystep:20,xd:0,yd:1,
+ words:'More weights have to sit closer to the middle. Double the weights, half the distance. So the distance is one fixed number, divided by the weights.',
+ say:'As a formula: distance equals a fixed number divided by the weights.',
+ formula:{html:c=>`distance = <b>${c}</b> ÷ weights`,f:(x,c)=>c/x,min:20,max:120,step:5,start:30,cd:0,short:'Put the other way round: weights × distance is the same on both sides. This is the law of the lever.',work:(c,y)=>`${c} ÷ 8 = ${y}`},
+ predict:{q:'How far from the middle will 8 weights balance?',x:8,unit:'cm'},
+ tryList:['Choose how many weights sit on the right, then drag the stack until the beam is level. Tap Record.','Do it for at least three different stacks.','Fit the number to your dots. This time the line is a curve.','Predict where 8 weights will balance, then test it.'],
+ saw:'Weight times distance is the turning strength, and a seesaw balances when both sides have the same turning strength. The number you fitted belongs to the left side: its weights times its distance. Check it. This is the law of the lever. Archimedes wrote it down more than two thousand years ago, and it is why a long handle makes a hard job easy.',
+ sim:simSeesaw},
+{id:'fallspeed',title:'Gravity adds speed',big:'A falling ball gains the same amount of speed every second. Measure that amount and you have measured gravity.',
+ img:'img3/fallspeed.jpg',alt:'A robot aiming a speed gun at a ball falling past a cliff',
+ gtitle:'Speed (m/s) against time (s)',xl:'time falling (s)',yl:'speed (m/s)',xmax:1.6,ymax:16,xstep:0.4,ystep:4,xd:1,yd:1,
+ words:'Each second of falling adds the same extra speed. So the speed is that amount, times the time spent falling.',
+ say:'As a formula: speed equals a number times the time.',
+ formula:{html:c=>`speed = <b>${c}</b> × time`,f:(x,c)=>c*x,min:0.5,max:12,step:0.1,start:5,cd:1,short:'Scientists write v = g × t. Your number g is the pull of gravity.',work:(c,y)=>`${c} × 1.5 = ${y}`},
+ predict:{q:'How fast will the ball be going after 1.5 seconds?',x:1.5,unit:'m/s'},
+ tryList:['Choose when to freeze the ball, then tap Drop. The speed gun reads its speed at that moment.','Measure at three or more different times.','Fit the number. On Earth it should come out close to 9.8.','Predict the speed after 1.5 seconds and test it. Then try the Moon.'],
+ saw:'The number is how much speed gravity adds each second. On Earth it is about 9.8 metres per second, every second. Scientists call it g. On the Moon it is about 1.6, which is why astronauts fall slowly. The formula is the same everywhere. Only the number changes from world to world.',
+ sim:(c,s)=>simFall(c,s,'v')},
+{id:'falldist',title:'How far it falls',big:'Distance fallen is not a straight line. It needs time multiplied by itself.',
+ img:'img3/falldist.jpg',alt:'A ball falling beside a tower, shown as frozen copies spaced further and further apart',
+ gtitle:'Distance fallen (m) against time (s)',xl:'time falling (s)',yl:'distance fallen (m)',xmax:1.6,ymax:12,xstep:0.4,ystep:3,xd:1,yd:2,
+ words:'The ball is always speeding up, so each moment covers more ground than the last. Twice the time gives four times the distance. So the distance is a number, times the time, times the time again.',
+ say:'As a formula: distance equals a number times time times time.',
+ formula:{html:c=>`distance = <b>${c}</b> × time × time`,f:(x,c)=>c*x*x,min:0.5,max:8,step:0.1,start:2,cd:1,short:'Scientists write d = ½ × g × t². Your number is half of g.',work:(c,y)=>`${c} × 1.5 × 1.5 = ${y}`},
+ predict:{q:'How far will the ball have fallen after 1.5 seconds?',x:1.5,unit:'m'},
+ tryList:['Freeze the ball at different times and read the tape.','Look at the dots. They curve upward.','Fit the number. Compare it with the 9.8 from the last lesson.','Predict the distance after 1.5 seconds and test it.'],
+ saw:'Twice the time, four times the distance: that is what time times time does. The number you fitted on Earth is about 4.9, exactly half of 9.8. That is no accident. The ball starts with no speed and ends at g times the time, so on average it moves at half of that. Galileo found this result by rolling balls down ramps, about four hundred years ago.',
+ sim:(c,s)=>simFall(c,s,'d')},
+{id:'force',title:'Push, mass, speed-up',big:'The same push speeds up a light cart quickly and a heavy cart slowly. The formula lets you weigh a cart by pushing it.',
+ img:'img3/force.jpg',alt:'A small cart with spinning fans on top, loaded with bricks, rolling along a track',
+ gtitle:'Speed-up (m/s each second) against push (N)',xl:'push (newtons)',yl:'speed-up (m/s each second)',xmax:9,ymax:5,xstep:1,ystep:1,xd:0,yd:2,
+ words:'More push gives more speed-up. More mass gives less. So the speed-up is the push, divided by the mass.',
+ say:'As a formula: speed-up equals push divided by mass.',
+ formula:{html:c=>`speed-up = push ÷ <b>${c}</b>`,f:(x,c)=>x/c,min:1,max:8,step:0.25,start:1,cd:2,short:'Your number is the mass of the cart in kilograms. Scientists write F = m × a: Newton\'s second law.',work:(c,y)=>`8 ÷ ${c} = ${y}`},
+ predict:{q:'How much speed will the cart gain each second with 8 newtons of push?',x:8,unit:'m/s'},
+ tryList:['Pick a cart, choose how many fans push it, and tap Go.','Measure with three or more different pushes.','Fit the number. It is the mass of the cart in kilograms.','Predict the speed-up with 8 newtons of push, then test it.'],
+ saw:'You found the mass of the cart without a scale, only by pushing it and watching. Speed-up is called acceleration. The rule, acceleration equals force divided by mass, is Newton\'s second law. It is usually written as force equals mass times acceleration, and it is the most used formula in physics.',
+ sim:simCart},
+{id:'pendulum',title:'The swing formula',big:'Level 2 showed that only length matters for a pendulum. Now find the exact rule, and use it on a pendulum too long for your dots.',
+ img:'img3/pendulum.jpg',alt:'A very long pendulum hanging in a tall round hall while a child and a robot look up',
+ gtitle:'Time per swing (s) against length (m)',xl:'length (m)',yl:'time per swing (s)',xmax:4.5,ymax:5,xstep:1,ystep:1,xd:2,yd:2,
+ words:'A longer string swings slower, but four times the length only doubles the time. That pattern is a square root. So the time is a number, times the square root of the length.',
+ say:'As a formula: time equals a number times the square root of the length.',
+ formula:{html:c=>`time = <b>${c}</b> × √length`,f:(x,c)=>c*Math.sqrt(x),min:1,max:3,step:0.05,start:1.2,cd:2,short:'The full formula is T = 2π × √(L ÷ g). On Earth that comes to about 2 × √L.',work:(c,y)=>`${c} × √4 = ${c} × 2 = ${y}`},
+ predict:{q:'How long will one swing of a 4 metre pendulum take?',x:4,unit:'s'},
+ tryList:['Set a length and time the swings. Do at least three lengths.','Fit the number to your dots.','Predict the swing time of a 4 metre pendulum. The square root of 4 is 2.','Test it and watch the long pendulum swing.'],
+ saw:'On Earth the number is very close to 2. A 1 metre pendulum takes 2 seconds and a 4 metre one takes 4. The full formula has gravity inside it, which is why a pendulum clock would run slow on the Moon. For centuries, pendulums were how people kept time and how they measured gravity.',
+ sim:simPend},
+];
+const WELCOME_TITLE='Level 3: write the rule';
+const WELCOME='Level 1 was feeling it. Level 2 was measuring it. Now you turn what you measured into a formula: one short line that predicts things you have not measured yet. Every lesson has the same three steps. Say the rule in words, fit a number to your own dots, then predict something new and test it.';
+const SAY_RIGHT='Your prediction matched. Your formula works.';
+const SAY_NOPE='Not quite. Check that the line runs through your dots, then predict again.';
+
+// ---- narration: recorded clips, with the device's own voice as a fallback ----
+const AUDIO_DIR='audio3';
+const ICON_PLAY='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
+const ICON_STOP='<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+const narr={audio:null,btn:null,queue:[],auto:false};
+try{narr.auto=localStorage.getItem('pp-readaloud')==='1';}catch(e){}
+function setBtn(b,playing){if(!b)return;b.innerHTML=(playing?ICON_STOP:ICON_PLAY)+'<span>'+(playing?'Stop':b.dataset.label)+'</span>';b.setAttribute('aria-pressed',String(playing));}
+function stopNarration(){narr.queue=[];if(narr.audio){narr.audio.onended=narr.audio.onerror=null;narr.audio.pause();narr.audio=null;}try{window.speechSynthesis&&speechSynthesis.cancel();}catch(e){}if(narr.btn){setBtn(narr.btn,false);narr.btn=null;}}
+function playClip(key,text,btn){
+  const a=new Audio(AUDIO_DIR+'/'+key+'.mp3');narr.audio=a;narr.btn=btn||null;setBtn(btn,true);let fell=false;
+  const done=()=>{if(narr.audio!==a)return;narr.audio=null;setBtn(narr.btn,false);narr.btn=null;const next=narr.queue.shift();if(next)playClip(...next);};
+  const quit=()=>{if(narr.audio!==a)return;narr.queue=[];done();};
+  const fallback=()=>{if(narr.audio!==a||fell)return;fell=true;try{const u=new SpeechSynthesisUtterance(typeof text==='function'?text():text);u.rate=0.95;u.onend=done;u.onerror=quit;speechSynthesis.speak(u);}catch(e){quit();}};
+  a.onended=done;a.onerror=fallback;
+  const p=a.play();if(p&&p.catch)p.catch(err=>{if(err&&err.name==='NotAllowedError')quit();else fallback();});
+}
+function narrate(key,text,btn){const same=btn&&narr.btn===btn;stopNarration();if(!same)playClip(key,text,btn);}
+function narrateSeq(list){stopNarration();narr.queue=list.slice(1);playClip(...list[0]);}
+function listenBtn(key,text,label='Listen'){const b=el('button',{type:'button',class:'listen',id:'say-'+key,'aria-pressed':'false'});b.dataset.label=label;setBtn(b,false);b.addEventListener('click',()=>narrate(key,text,b));return b;}
+function cardHead(title,btn){return el('div',{class:'cardhead'},el('h3',{},el('span'),title),btn);}
+
+// ---- runner ----
+let progress={};try{progress=JSON.parse(localStorage.getItem('pp3-progress')||'{}')||{};}catch(e){progress={};}
+function saveProgress(){try{localStorage.setItem('pp3-progress',JSON.stringify(progress));}catch(e){}}
+let current=null,active=null;
+function renderStrip(){
+  const host=$('#lessons');host.innerHTML='';
+  LESSONS.forEach((L,i)=>{const c=el('button',{type:'button',class:'chip'+(progress[L.id]?' done':''),role:'tab','aria-current':String(current===L.id),id:'tab-'+L.id},el('b',{},progress[L.id]?'✓':String(i+1)),L.title);c.addEventListener('click',()=>{location.hash=L.id;});host.append(c);});
+  const n=Object.keys(progress).filter(k=>LESSONS.some(L=>L.id===k)).length;$('#count').textContent=`${n} of ${LESSONS.length} done`;
+  const cur=$('#tab-'+current);if(cur)cur.scrollIntoView({inline:'center',block:'nearest',behavior:reduced?'auto':'smooth'});
+}
+function show(id){
+  const L=LESSONS.find(x=>x.id===id)||LESSONS[0];
+  if(active){active.stop();active=null;}
+  stopNarration();
+  current=L.id;renderStrip();const i=LESSONS.indexOf(L);const F=L.formula,P=L.predict;
+  const S={pts:[],c:F.start,pred:null,actual:null,testing:false};
+  const host=$('#lesson');host.innerHTML='';
+  const stage=el('canvas',{class:'stage',id:'st-'+L.id,'aria-label':L.title+' scene',role:'img'});
+  const gcan=el('canvas',{class:'graph',id:'gr-'+L.id,'aria-label':L.gtitle,role:'img'});
+  const controls=el('div',{class:'controls'});const caption=el('div',{class:'caption',id:'cap-'+L.id});
+  const tw=el('div',{class:'tw'});const data=el('div',{class:'data'},el('span',{class:'lab'},'Your measurements'),tw);
+  const li=(k,t)=>el('span',{class:'li'},el('i',{class:'k '+k}),t);const legend=el('div',{class:'legend'},li('dot','your dots'),li('line','your formula'),li('ring','your prediction'));
+
+  const SAY={hero:L.title+'. '+L.big,try:'Try this. '+L.tryList.join(' '),saw:'What you saw. '+L.saw,rule:'The rule in words. '+L.words+' '+L.say};
+  const fEl=el('div',{class:'formula',id:'formula'});const fitMsg=el('p',{class:'fitmsg',id:'fitmsg'});
+  const fitIn=el('input',{type:'range',id:'fit',min:F.min,max:F.max,step:F.step,value:F.start,'aria-label':'The number in the formula'});
+  const predIn=el('input',{type:'number',id:'pred',inputmode:'decimal',step:'any','aria-label':'Your prediction'});
+  const workBtn=el('button',{type:'button',class:'btn',id:'workout'},'Work it out for me');
+  const testBtn=el('button',{type:'button',class:'btn primary',id:'test'},'Test it');
+  const workEl=el('p',{class:'work',id:'work'});const result=el('p',{class:'result',id:'result'});
+  const bench=el('div',{class:'bench'},
+    el('div',{class:'step'},el('div',{class:'cardhead'},el('span',{class:'lab'},'Step 1 · The rule in words'),listenBtn(L.id+'-rule',SAY.rule)),el('p',{class:'words'},L.words)),
+    el('div',{class:'step'},el('span',{class:'lab'},'Step 2 · Fit the formula to your dots'),fEl,fitIn,fitMsg,el('p',{class:'short'},F.short)),
+    el('div',{class:'step'},el('span',{class:'lab'},'Step 3 · Predict, then test'),el('p',{class:'words'},P.q),el('div',{class:'predrow'},predIn,el('span',{class:'unit'},P.unit),workBtn,testBtn),workEl,result));
+
+  const cStr=()=>fmt(S.c,F.cd);
+  function fitState(){if(S.pts.length<3)return'few';const e=S.pts.reduce((a,p)=>a+Math.abs(F.f(p[0],S.c)-p[1]),0)/S.pts.reduce((a,p)=>a+Math.abs(p[1]),0);return e<0.04?'good':e<0.15?'close':'off';}
+  function renderTable(){tw.innerHTML='';if(!S.pts.length){tw.append(el('p',{class:'empty'},'Nothing measured yet.'));return;}
+    tw.append(el('table',{},el('thead',{},el('tr',{},el('th',{},L.xl),el('th',{},L.yl+', measured'),el('th',{},'your formula says'))),
+      el('tbody',{},...S.pts.map(p=>el('tr',{},el('td',{},fmt(p[0],L.xd)),el('td',{},fmt(p[1],L.yd)),el('td',{},fmt(F.f(p[0],S.c),L.yd)))))));}
+  function refresh(){fEl.innerHTML=F.html(cStr());const s=fitState();fitMsg.dataset.state=s;
+    fitMsg.textContent=s==='few'?`Measure at least 3 dots first. You have ${S.pts.length}.`:s==='good'?'The line runs through your dots. That is your formula.':s==='close'?'Close. Nudge the number.':'The line misses your dots. Slide the number.';renderTable();}
+  fitIn.addEventListener('input',()=>{S.c=+fitIn.value;refresh();});
+  workBtn.addEventListener('click',()=>{const y=fmt(F.f(P.x,+cStr()),L.yd);predIn.value=y;workEl.textContent=F.work(cStr(),y)+' '+P.unit;});
+  const st={setCaption:t=>{if(caption.textContent!==t)caption.textContent=t;},
+    addPoint(x,y){const k=S.pts.findIndex(p=>Math.abs(p[0]-x)<1e-6);if(k>=0)S.pts[k]=[x,y];else S.pts.push([x,y]);S.pts.sort((a,b)=>a[0]-b[0]);refresh();},
+    clearPoints(){S.pts=[];S.pred=S.actual=null;result.textContent='';result.dataset.state='';workEl.textContent='';refresh();},
+    get testing(){return S.testing;}};
+  testBtn.addEventListener('click',()=>{if(S.testing)return;const v=parseFloat(predIn.value);result.dataset.state='';
+    if(S.pts.length<3){result.textContent='Measure at least 3 dots first, so you have something to fit.';return;}
+    if(!isFinite(v)){result.textContent='Type your prediction first, or tap Work it out for me.';return;}
+    S.pred=v;S.actual=null;S.testing=true;result.textContent='Testing...';
+    active.sim.test(P.x,v,actual=>{S.testing=false;S.actual=actual;const tol=0.06*Math.abs(actual);const ok=Math.abs(v-actual)<=tol,fOk=Math.abs(F.f(P.x,S.c)-actual)<=tol;
+      const head=`You predicted ${fmt(v,L.yd)} ${P.unit}. The real answer was ${fmt(actual,L.yd)} ${P.unit}. `;
+      if(ok){result.dataset.state='right';result.textContent=head+'Your formula works.';progress[L.id]=1;saveProgress();renderStrip();if(narr.auto)narrate('right',SAY_RIGHT);}
+      else{result.dataset.state='wrong';result.textContent=head+(fOk?'Your formula is good, so check the sum. Work it out for me shows the steps.':'Your formula is off. Refit the number to your dots, then predict again.');if(narr.auto)narrate('nope',SAY_NOPE);}});});
+
+  function drawGraph(ctx,w,h){const g=graph(ctx,w,h,{xl:L.xl,yl:L.yl,xmin:0,xmax:L.xmax,ymin:0,ymax:L.ymax,xstep:L.xstep,ystep:L.ystep});
+    g.clip();const cur=[];for(let k=0;k<=120;k++){const x=L.xmax*k/120,y=F.f(x,S.c);if(isFinite(y))cur.push([x,Math.min(y,L.ymax*3)]);}
+    g.line(cur,TOK.s2,{width:2.5});g.vline(P.x,TOK.muted);S.pts.forEach(p=>g.point(p[0],p[1],TOK.s1,6));
+    if(S.pred!=null)g.point(P.x,S.pred,TOK.s2,7,false);if(S.actual!=null)g.point(P.x,S.actual,TOK.s1,6);g.unclip();
+    const right=P.x>L.xmax*0.6;label(ctx,'predict here',g.px(P.x)+(right?-6:6),g.mt+9,{size:11,color:TOK.muted,weight:700,align:right?'right':'left'});}
+
+  const heroBtn=listenBtn(L.id+'-hero',SAY.hero),tryBtn=listenBtn(L.id+'-try',SAY.try);
+  const autoBtn=el('button',{type:'button',class:'listen',id:'readaloud','aria-pressed':String(narr.auto),title:'Reads each lesson to you when you open it, and speaks the test result'},'Read to me: '+(narr.auto?'on':'off'));
+  const autoRead=()=>narrateSeq([[L.id+'-hero',SAY.hero,heroBtn],[L.id+'-try',SAY.try,tryBtn]]);
+  autoBtn.addEventListener('click',()=>{narr.auto=!narr.auto;try{localStorage.setItem('pp-readaloud',narr.auto?'1':'0');}catch(e){}autoBtn.setAttribute('aria-pressed',String(narr.auto));autoBtn.textContent='Read to me: '+(narr.auto?'on':'off');if(narr.auto)autoRead();else stopNarration();});
+  host.append(...[
+    i===0?el('div',{class:'card intro'},el('img',{src:'img3/hero.jpg',alt:'A child drawing a curve through chalk dots on a chalkboard while a robot holds a ball and a stopwatch'}),el('div',{},el('h1',{},WELCOME_TITLE),el('p',{class:'big'},WELCOME),listenBtn('welcome',WELCOME_TITLE+'. '+WELCOME))):null,
+    el('div',{class:'hero'},el('img',{src:L.img,alt:L.alt,loading:'eager'}),el('div',{class:'txt'},el('div',{class:'eyebrow'},`Lesson ${i+1} of ${LESSONS.length}`),el('h2',{},L.title),el('p',{class:'big'},L.big),el('div',{class:'sayrow'},heroBtn,autoBtn))),
+    el('div',{class:'sim'},el('div',{class:'panes'},stage,el('div',{class:'gwrap'},el('div',{class:'gtitle'},L.gtitle,legend),gcan)),caption,controls,data,bench),
+    el('div',{class:'two'},el('div',{class:'card'},cardHead('Try this',tryBtn),el('ul',{},...L.tryList.map(t=>el('li',{},t)))),el('div',{class:'card'},cardHead('What you saw',listenBtn(L.id+'-saw',SAY.saw)),el('p',{class:'saw'},L.saw))),
+    el('div',{class:'nav'},i>0?el('button',{type:'button',class:'btn',id:'prev',onclick:()=>{location.hash=LESSONS[i-1].id;}},'← '+LESSONS[i-1].title):el('span'),i<LESSONS.length-1?el('button',{type:'button',class:'btn primary',id:'next',onclick:()=>{location.hash=LESSONS[i+1].id;}},'Next: '+LESSONS[i+1].title+' →'):el('span'))
+  ].filter(Boolean));
+  if(progress[L.id]){result.dataset.state='right';result.textContent='You have passed this one. Change a setting and try to predict again.';}
+  active=runSim(L.sim,stage,gcan,controls,st,drawGraph);refresh();
+  window.scrollTo({top:0,behavior:'auto'});
+  if(narr.auto)autoRead();
+}
+function runSim(factory,stage,gcan,controls,st,drawGraph){
+  const sctx=stage.getContext('2d'),gctx=gcan.getContext('2d');let sw=0,sh=0,gw=0,gh=0,last=0,stopped=false,raf=0;
+  const sim=factory(controls,st);
+  function fit(c,ctx,ratio,minH,maxH){const r=c.getBoundingClientRect();const cw=r.width;const ch=clamp(cw*ratio,minH,maxH);const dpr=Math.min(2,devicePixelRatio||1);c.style.height=ch+'px';c.width=Math.round(cw*dpr);c.height=Math.round(ch*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);return[cw,ch];}
+  function fitAll(){[sw,sh]=fit(stage,sctx,0.6,220,400);[gw,gh]=fit(gcan,gctx,0.62,200,330);if(sim.resize)sim.resize(sw,sh);}
+  fitAll();const ro=new ResizeObserver(()=>fitAll());ro.observe(stage);ro.observe(gcan);
+  const pos=e=>{const r=stage.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};};let down=false;
+  stage.addEventListener('pointerdown',e=>{down=true;stage.setPointerCapture(e.pointerId);stage.classList.add('grabbing');const p=pos(e);sim.pointer&&sim.pointer('down',p.x,p.y,sw,sh);});
+  stage.addEventListener('pointermove',e=>{const p=pos(e);sim.pointer&&sim.pointer(down?'drag':'move',p.x,p.y,sw,sh);});
+  const up=e=>{if(!down)return;down=false;stage.classList.remove('grabbing');const p=pos(e);sim.pointer&&sim.pointer('up',p.x,p.y,sw,sh);};
+  stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+  function frame(t){if(stopped)return;const dt=last?Math.min(0.033,(t-last)/1000):0.016;last=t;sctx.clearRect(0,0,sw,sh);sim.draw(sctx,sw,sh,dt);gctx.clearRect(0,0,gw,gh);drawGraph(gctx,gw,gh);raf=requestAnimationFrame(frame);}
+  raf=requestAnimationFrame(frame);
+  return{sim,stop(){stopped=true;cancelAnimationFrame(raf);ro.disconnect();sim.stop&&sim.stop();}};
+}
+// a ruler drawn along a line, with labelled ticks
+function hRuler(ctx,x0,x1,y,n,unit,every=1){ctx.fillStyle='#f3e2a5';ctx.fillRect(x0-10,y,x1-x0+20,30);ctx.strokeStyle=TOK.ink;ctx.lineWidth=1.5;for(let i=0;i<=n*10;i++){const X=x0+(x1-x0)*i/(n*10);const big=i%10===0;ctx.beginPath();ctx.moveTo(X,y);ctx.lineTo(X,y+(big?13:i%5===0?8:4));ctx.stroke();if(big&&(i/10)%every===0)label(ctx,String(i/10)+(i===n*10?' '+unit:''),X,y+22,{size:11,color:'#172529',mono:true});}}
+function predFlag(ctx,x,y,text){ctx.strokeStyle=TOK.s2;ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-58);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=TOK.s2;ctx.beginPath();ctx.moveTo(x,y-58);ctx.lineTo(x+16,y-51);ctx.lineTo(x,y-44);ctx.closePath();ctx.fill();const flip=x>ctx.canvas.clientWidth*0.7;label(ctx,text,x+(flip?-4:4),y-68,{size:11,color:TOK.ink,align:flip?'right':'left',weight:700});}
+
+// ---- 1. train ----
+function simTrain(controls,st){
+  const TR={red:{v:2,c:'#dd5f44'},blue:{v:1.5,c:'#3b6fd1'},green:{v:2.5,c:'#3a9a5c'}};
+  let key='red',x=0,t=0,running=false,next=1,stopAt=null,cb=null,flag=null;
+  const reset=()=>{x=0;t=0;running=false;next=1;stopAt=null;cb=null;};
+  seg(controls,{id:'train',label:'Train',options:[{v:'red',l:'Red'},{v:'blue',l:'Blue'},{v:'green',l:'Green'}],value:key,onChange:v=>{if(st.testing)return;key=v;reset();flag=null;st.clearPoints();}});
+  button(controls,'Start',()=>{if(st.testing)return;reset();flag=null;running=true;},{primary:true,id:'start'});
+  return{
+    test(xs,pred,done){reset();stopAt=xs;cb=done;flag=pred;running=true;},
+    draw(ctx,w,h,dt){const v=TR[key].v;
+      if(running){t+=dt;x=v*t;
+        if(stopAt!=null){if(t>=stopAt){t=stopAt;x=v*t;running=false;const c=cb;cb=null;c(x);}}
+        else{if(t>=next&&v*next<=10.001){st.addPoint(next,+(v*next).toFixed(1));next++;}if(x>=10){x=10;running=false;}}}
+      const gy=h*0.66,x0=w*0.08,x1=w*0.92,m=i=>x0+(x1-x0)*i/10;
+      ctx.fillStyle=TOK.sky;ctx.fillRect(0,0,w,gy);ctx.fillStyle='#8fbf6b';ctx.fillRect(0,gy,w,h-gy);
+      ctx.fillStyle='#7a5a3a';ctx.fillRect(0,gy-6,w,6);ctx.fillStyle='#5a6670';for(let i=0;i<w;i+=18)ctx.fillRect(i,gy-10,8,4);
+      hRuler(ctx,x0,x1,gy+12,10,'m');
+      if(flag!=null)predFlag(ctx,m(clamp(flag,0,10.4)),gy-6,'your prediction');
+      const tx=m(Math.min(x,10.4));ctx.fillStyle=TR[key].c;ctx.beginPath();ctx.roundRect(tx-26,gy-40,52,30,6);ctx.fill();ctx.fillStyle=TOK.ink;ctx.fillRect(tx-20,gy-54,16,14);circle(ctx,tx-14,gy-10,7,TOK.ink);circle(ctx,tx+14,gy-10,7,TOK.ink);
+      ctx.strokeStyle=TR[key].c;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(tx,gy-10);ctx.lineTo(tx,gy+12);ctx.stroke();ctx.setLineDash([]);
+      stopwatch(ctx,w-12,24,t,running);label(ctx,fmt(x,1)+' m',12,24,{align:'left',size:16,mono:true});
+      st.setCaption(stopAt!=null?(running?'Testing: the train will stop at 3.5 seconds.':`At 3.5 seconds the train is at ${fmt(x,1)} m.`):running?'Recording a dot every second.':t>0?'Run finished. Fit the number to your dots, or run again.':'Pick a train and tap Start. It records a dot every second.');}
+  };
+}
+
+// ---- 2. spring ----
+function simSpring(controls,st){
+  const SP={a:2,b:3};let key='a',n=0,shown=0,settle=0,pending=null,bag=null,cb=null;
+  seg(controls,{id:'spr',label:'Spring',options:[{v:'a',l:'Spring A'},{v:'b',l:'Spring B'}],value:key,onChange:v=>{if(st.testing)return;key=v;n=0;bag=null;pending=null;st.clearPoints();}});
+  button(controls,'Add a weight',()=>{if(st.testing)return;if(bag){bag=null;n=0;}if(n<6){n++;settle=0.7;pending=n;}},{primary:true,id:'add'});
+  button(controls,'Take one off',()=>{if(st.testing)return;if(bag){bag=null;n=0;return;}if(n>0){n--;settle=0.7;pending=n>0?n:null;}},{id:'remove'});
+  return{
+    test(xs,pred,done){n=0;pending=null;bag={pull:xs,pred};settle=1.3;cb=done;},
+    draw(ctx,w,h,dt){const target=(bag?bag.pull:n)*SP[key];shown+=(target-shown)*Math.min(1,dt*6);
+      if(settle>0){settle-=dt;if(settle<=0){if(cb){const c=cb;cb=null;c(target);}else if(pending){st.addPoint(pending,+target.toFixed(1));pending=null;}}}
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);
+      const top=h*0.08,px=w*0.5,cm=(h*0.84)/40,nat=8,rx=w*0.72;
+      ctx.fillStyle='#f3e2a5';ctx.fillRect(rx,top-6,30,40*cm+12);ctx.strokeStyle='#172529';ctx.lineWidth=1.5;for(let i=0;i<=40;i++){const Y=top+i*cm;const big=i%10===0;ctx.beginPath();ctx.moveTo(rx,Y);ctx.lineTo(rx+(big?14:i%5===0?9:5),Y);ctx.stroke();}
+      // the ruler is read from the spring's resting end, so it shows stretch directly
+      for(let s=0;s<=30;s+=5){const Y=top+(nat+s)*cm;label(ctx,s+(s===0?' cm':''),rx+34,Y,{size:11,align:'left',mono:true});}
+      ctx.fillStyle='#5a6670';ctx.fillRect(px-50,top-12,100,8);
+      const len=(nat+shown)*cm,coils=12;ctx.strokeStyle='#7f8a94';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px,top-4);for(let i=0;i<=coils*8;i++){const u=i/(coils*8);ctx.lineTo(px+Math.sin(u*coils*Math.PI*2)*14,top+u*len);}ctx.stroke();
+      const sy=top+len;ctx.strokeStyle=TOK.coral;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(px,sy);ctx.lineTo(rx,sy);ctx.stroke();ctx.setLineDash([]);
+      if(bag){const py=top+(nat+bag.pred)*cm;ctx.strokeStyle=TOK.s2;ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(px-60,py);ctx.lineTo(rx,py);ctx.stroke();ctx.setLineDash([]);label(ctx,'your prediction',px-64,py,{size:11,align:'right',weight:700});
+        ctx.fillStyle='#b98a55';ctx.beginPath();ctx.moveTo(px-20,sy+6);ctx.lineTo(px+20,sy+6);ctx.lineTo(px+26,sy+44);ctx.lineTo(px-26,sy+44);ctx.closePath();ctx.fill();label(ctx,'?',px,sy+26,{size:16,color:'#fff'});}
+      else for(let i=0;i<n;i++){ctx.fillStyle='#5a6670';ctx.beginPath();ctx.roundRect(px-22,sy+4+i*10,44,9,3);ctx.fill();}
+      label(ctx,bag?'bag: 4.5 N':'pull: '+n+' N',12,24,{align:'left',size:14,mono:true});label(ctx,fmt(shown,1)+' cm',12,44,{align:'left',size:14,mono:true,color:TOK.coral});
+      st.setCaption(bag?(settle>0?'Hanging the mystery bag...':`The bag stretched the spring ${fmt(target,1)} cm.`):n===0?'Hang weights one at a time. Each pulls with 1 newton.':settle>0?'Settling...':`${n} N of pull, ${fmt(target,1)} cm of stretch. Recorded.`);}
+  };
+}
+
+// ---- 3. density ----
+function simDensity(controls,st){
+  const MAT={pine:{d:0.5,c:'#d8b07a'},wax:{d:0.9,c:'#f1e3b8'},rubber:{d:1.5,c:'#4a4f57'}};
+  let key='pine',vol=40,blk=null,cb=null;
+  seg(controls,{id:'mat',label:'Material',options:[{v:'pine',l:'Pine'},{v:'wax',l:'Wax'},{v:'rubber',l:'Rubber'}],value:key,onChange:v=>{if(st.testing)return;key=v;blk=null;st.clearPoints();}});
+  seg(controls,{id:'size',label:'Block size (mL)',options:[20,40,60,80,100].map(v=>({v,l:String(v)})),value:vol,onChange:v=>vol=v});
+  button(controls,'Weigh it',()=>{if(st.testing||(blk&&blk.t<2.6))return;blk={vol,t:0,done:false,pred:null};},{primary:true,id:'weigh'});
+  return{
+    test(xs,pred,done){blk={vol:xs,t:0,done:false,pred};cb=done;},
+    draw(ctx,w,h,dt){const M=MAT[key];if(blk)blk.t+=dt;
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);const base=h*0.88;
+      // scale
+      const scx=w*0.24;ctx.fillStyle='#5a6670';ctx.beginPath();ctx.roundRect(scx-60,base-34,120,34,6);ctx.fill();ctx.fillStyle=TOK.panel;ctx.fillRect(scx-40,base-27,80,20);ctx.fillStyle='#8a949c';ctx.fillRect(scx-50,base-40,100,6);
+      // tank
+      const tx=w*0.7,tw2=w*0.34,th=h*0.5,ty=base-th,wl=ty+th*0.25;ctx.fillStyle='rgba(70,150,210,.55)';ctx.fillRect(tx-tw2/2,wl,tw2,base-wl);ctx.strokeStyle=TOK.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(tx-tw2/2,ty);ctx.lineTo(tx-tw2/2,base);ctx.lineTo(tx+tw2/2,base);ctx.lineTo(tx+tw2/2,ty);ctx.stroke();
+      let reading=0;
+      if(blk){const mass=blk.vol*M.d,side=14+Math.cbrt(blk.vol)*10;let bx,by;const u=blk.t;
+        if(u<0.5){bx=scx;by=lerp(base-150,base-40-side/2,u/0.5);}
+        else if(u<1.7){bx=scx;by=base-40-side/2;reading=mass*Math.min(1,(u-0.5)/0.6);if(u>1.2&&!blk.done){blk.done=true;if(cb){const c=cb;cb=null;c(mass);}else st.addPoint(blk.vol,+mass.toFixed(1));}}
+        else{const k=Math.min(1,(u-1.7)/0.9);const rest=M.d<1?wl+side*(M.d-0.5):base-side/2;bx=lerp(scx,tx,Math.min(1,k*1.6));by=lerp(base-40-side/2,rest,k*k);}
+        ctx.fillStyle=M.c;ctx.beginPath();ctx.roundRect(bx-side/2,by-side/2,side,side,5);ctx.fill();ctx.strokeStyle=TOK.ink;ctx.lineWidth=1.5;ctx.stroke();
+        label(ctx,fmt(blk.vol,0)+' mL',bx,by-side/2-10,{size:11,weight:700});
+        st.setCaption(u<0.5?'On to the scale...':u<1.7?`${fmt(blk.vol,0)} mL of ${key} weighs ${fmt(mass,1)} g.`:`${fmt(mass,1)} g. In the water it ${M.d<1?'floats':'sinks'}.`);}
+      else st.setCaption('Pick a material and a block size, then tap Weigh it.');
+      label(ctx,fmt(reading,0)+' g',scx,base-17,{size:13,mono:true,color:TOK.ink});
+      if(blk&&blk.pred!=null)label(ctx,'you predicted '+fmt(blk.pred,0)+' g',scx,base-56-70,{size:12,weight:700});
+      label(ctx,key,12,24,{align:'left',size:16});label(ctx,'water',tx,base-10,{size:11,color:TOK.ink,weight:700});}
+  };
+}
+
+// ---- 4. seesaw ----
+function simSeesaw(controls,st){
+  const LOAD={a:{n:2,d:30},b:{n:3,d:30}};let key='a',n=1,d=50,ang=0,drag=false,tst=null,cb=null,W=600;
+  seg(controls,{id:'load',label:'Left side',options:[{v:'a',l:'Load A'},{v:'b',l:'Load B'}],value:key,onChange:v=>{if(st.testing)return;key=v;st.clearPoints();}});
+  seg(controls,{id:'nw',label:'Weights on the right',options:[1,2,3,4,5,6].map(v=>({v,l:String(v)})),value:n,onChange:v=>{if(st.testing)return;n=v;tst=null;}});
+  button(controls,'◀ Nudge',()=>{if(!st.testing)d=clamp(d-0.5,5,100);},{id:'nudge-in'});
+  button(controls,'Nudge ▶',()=>{if(!st.testing)d=clamp(d+0.5,5,100);},{id:'nudge-out'});
+  let msg='';
+  button(controls,'Record',()=>{if(st.testing)return;const c=LOAD[key].n*LOAD[key].d;if(n>6){msg='Choose 1 to 6 weights to measure.';return;}if(Math.abs(n*d-c)/c<0.02){st.addPoint(n,d);msg=`Recorded: ${n} weights balance at ${fmt(d,1)} cm.`;}else msg='Not level yet. Drag or nudge the stack until the beam is flat.';},{primary:true,id:'record'});
+  return{resize(w){W=w;},
+    pointer(type,px,py,w){if(st.testing)return;if(type==='down'){drag=true;tst=null;}if(drag&&(type==='down'||type==='drag')){d=clamp(Math.round((px-w/2)/(w*0.44)*100*2)/2,5,100);msg='';}if(type==='up')drag=false;},
+    test(xs,pred,done){n=xs;d=clamp(pred,2,100);tst={t:0};cb=done;msg='';},
+    draw(ctx,w,h,dt){const Ld=LOAD[key],c=Ld.n*Ld.d,torque=n*d-c;const target=clamp(torque/c*0.9,-0.2,0.2);ang+=(target-ang)*Math.min(1,dt*4);
+      if(tst){tst.t+=dt;if(tst.t>1.8&&cb){const f=cb;cb=null;f(c/n);}}
+      ctx.fillStyle=TOK.sky;ctx.fillRect(0,0,w,h*0.8);ctx.fillStyle='#8fbf6b';ctx.fillRect(0,h*0.8,w,h*0.2);
+      const cx=w/2,cy=h*0.6,half=w*0.44,sc=half/100;
+      ctx.fillStyle='#5a6670';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx-26,h*0.8);ctx.lineTo(cx+26,h*0.8);ctx.closePath();ctx.fill();
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(ang);
+      ctx.fillStyle='#b8864f';ctx.fillRect(-half-8,-7,half*2+16,10);ctx.strokeStyle='#172529';ctx.lineWidth=1.5;
+      for(let k=-100;k<=100;k+=10){const X=k*sc;ctx.beginPath();ctx.moveTo(X,-7);ctx.lineTo(X,k%20===0?3:-2);ctx.stroke();if(k!==0&&k%20===0)label(ctx,String(Math.abs(k)),X,13,{size:10,mono:true,color:TOK.ink});}
+      const stack=(X,count,col)=>{for(let i=0;i<count;i++){ctx.fillStyle=col;ctx.beginPath();ctx.roundRect(X-14,-17-i*10,28,9,3);ctx.fill();}};
+      stack(-Ld.d*sc,Ld.n,'#5a6670');stack(d*sc,n,TOK.coral);
+      ctx.restore();
+      label(ctx,`left: ${Ld.n} weights at ${Ld.d} cm`,12,24,{align:'left',size:13,mono:true});label(ctx,`right: ${n} weights at ${fmt(d,1)} cm`,12,44,{align:'left',size:13,mono:true,color:TOK.coral});
+      const level=Math.abs(torque)/c<0.02;label(ctx,level?'level':torque>0?'right side too heavy':'left side too heavy',cx,h*0.92,{size:14,color:level?TOK.good:TOK.ink});
+      st.setCaption(tst?(cb?'Testing your prediction with 8 weights...':level?'Level. Eight weights balance right where you said.':`Not level there. Eight weights balance at ${fmt(c/n,1)} cm.`):msg||'Drag the red stack along the beam until it is level, then tap Record.');}
+  };
+}
+
+// ---- 5 and 6. falling: speed mode ('v') or distance mode ('d') ----
+function simFall(controls,st,mode){
+  const G={earth:9.8,mars:3.7,moon:1.6};let key='earth',freeze=0.6,t=0,falling=false,frozen=false,stopT=0.6,cb=null,pred=null,testRun=false;
+  seg(controls,{id:'world',label:'Where',options:[{v:'earth',l:'Earth'},{v:'mars',l:'Mars'},{v:'moon',l:'Moon'}],value:key,onChange:v=>{if(st.testing)return;key=v;t=0;frozen=false;pred=null;st.clearPoints();}});
+  slider(controls,{id:'freeze',label:'Freeze the ball after',lo:'0.2 s',hi:'1.2 s',min:0.2,max:1.2,step:0.1,value:freeze,onInput:v=>freeze=v});
+  button(controls,'Drop',()=>{if(st.testing||falling)return;t=0;falling=true;frozen=false;stopT=freeze;pred=null;testRun=false;},{primary:true,id:'drop'});
+  return{
+    test(xs,p,done){t=0;falling=true;frozen=false;stopT=xs;cb=done;pred=p;testRun=true;},
+    draw(ctx,w,h,dt){const g=G[key];
+      if(falling){t+=dt;if(t>=stopT){t=stopT;falling=false;frozen=true;const val=mode==='v'?g*t:0.5*g*t*t;if(cb){const c=cb;cb=null;c(val);}else st.addPoint(+stopT.toFixed(1),+val.toFixed(mode==='v'?1:2));}}
+      const v=g*t,dist=0.5*g*t*t;const top=h*0.12,bot=h*0.94,sc=(bot-top)/12;
+      const sky=key==='earth'?TOK.sky:key==='mars'?'#e7b08a':'#10162b',rock=key==='earth'?'#8a8f86':key==='mars'?'#a5593a':'#8c8f97',ink=key==='moon'?'#ffffff':'#172529';
+      ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);ctx.fillStyle=rock;ctx.fillRect(0,top,w*0.2,h-top);ctx.fillRect(0,bot,w,h-bot);
+      // tape down the cliff
+      const tx=w*0.2;ctx.fillStyle='#f3e2a5';ctx.fillRect(tx,top,26,bot-top);ctx.strokeStyle='#172529';ctx.lineWidth=1.5;for(let i=0;i<=24;i++){const Y=top+i*sc/2;const big=i%2===0;ctx.beginPath();ctx.moveTo(tx,Y);ctx.lineTo(tx+(big?12:6),Y);ctx.stroke();if(big&&i%4===0)label(ctx,(i/2)+' m',tx+30,Y,{size:11,align:'left',mono:true,color:ink});}
+      const bx=w*0.52,by=top+dist*sc;
+      if(mode==='d'&&pred!=null){const py=top+clamp(pred,0,12.5)*sc;ctx.strokeStyle=TOK.s2;ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(tx+26,py);ctx.lineTo(w*0.8,py);ctx.stroke();ctx.setLineDash([]);label(ctx,'your prediction',w*0.8+4,py,{size:11,align:'left',weight:700,color:ink});}
+      if(t>0){ctx.strokeStyle=TOK.coral;ctx.setLineDash([3,4]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(tx+26,by);ctx.lineTo(bx,by);ctx.stroke();ctx.setLineDash([]);}
+      circle(ctx,bx,by,11,TOK.coral,'#172529');
+      stopwatch(ctx,w-12,24,t,falling);
+      label(ctx,mode==='v'?'speed gun: '+fmt(v,1)+' m/s':'fallen: '+fmt(dist,2)+' m',w-12,56,{align:'right',size:14,mono:true,color:ink});
+      if(mode==='v'&&pred!=null)label(ctx,'you predicted '+fmt(pred,1)+' m/s',w-12,78,{align:'right',size:12,weight:700,color:ink});
+      label(ctx,key==='earth'?'Earth':key==='mars'?'Mars':'The Moon',w*0.2+60,top-14,{size:14,color:ink,align:'left'});
+      const what=mode==='v'?`${fmt(v,1)} m/s`:`${fmt(dist,2)} m`;
+      st.setCaption(falling?(testRun?'Testing: freezing the ball at 1.5 seconds.':`Falling. It will freeze at ${fmt(stopT,1)} s.`):frozen?`Frozen at ${fmt(t,1)} s: ${mode==='v'?'going':'fallen'} ${what}.`+(testRun?'':' Recorded.'):'Choose when to freeze the ball, then tap Drop.');}
+  };
+}
+
+// ---- 7. cart ----
+function simCart(controls,st){
+  const CART={a:{m:2,c:'#dd5f44',n:'Cart A'},b:{m:4,c:'#3b6fd1',n:'Cart B'}};let key='a',fans=2,F=2,x=0,v=0,t=0,running=false,ran=false,cb=null,pred=null,testRun=false,spin=0;
+  seg(controls,{id:'cart',label:'Cart',options:[{v:'a',l:'Cart A'},{v:'b',l:'Cart B'}],value:key,onChange:k=>{if(st.testing)return;key=k;x=0;v=0;t=0;ran=false;pred=null;st.clearPoints();}});
+  seg(controls,{id:'fans',label:'Fans pushing (1 N each)',options:[1,2,3,4,5,6].map(v=>({v,l:String(v)})),value:fans,onChange:k=>{fans=k;}});
+  button(controls,'Go',()=>{if(st.testing||running)return;F=fans;x=0;v=0;t=0;running=true;ran=false;pred=null;testRun=false;},{primary:true,id:'go'});
+  return{
+    test(xs,p,done){F=xs;x=0;v=0;t=0;running=true;ran=false;cb=done;pred=p;testRun=true;},
+    draw(ctx,w,h,dt){const C=CART[key],a=F/C.m;
+      if(running){t+=dt;if(t>=2){t=2;running=false;ran=true;if(cb){const c=cb;cb=null;c(a);}else st.addPoint(F,+a.toFixed(2));}v=a*t;x=0.5*a*t*t;spin+=dt*30;}
+      const gy=h*0.66,x0=w*0.08,x1=w*0.92,m=i=>x0+(x1-x0)*i/9;
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);ctx.fillStyle='#b8864f';ctx.fillRect(0,gy,w,8);hRuler(ctx,x0,x1,gy+14,9,'m');
+      const cx=m(x)+6;ctx.fillStyle=C.c;ctx.beginPath();ctx.roundRect(cx-34,gy-30,68,22,5);ctx.fill();circle(ctx,cx-20,gy-6,7,TOK.ink);circle(ctx,cx+20,gy-6,7,TOK.ink);
+      if(key==='b'){ctx.fillStyle='#8a5a3a';ctx.fillRect(cx-26,gy-44,24,14);ctx.fillRect(cx+2,gy-44,24,14);}
+      const fy=gy-(key==='b'?56:42);for(let i=0;i<F;i++){const fx=cx-28+(i%4)*18,yy=fy-Math.floor(i/4)*20;ctx.strokeStyle=TOK.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(fx,yy+10);ctx.lineTo(fx,yy);ctx.stroke();const s=running?Math.abs(Math.sin(spin+i)):1;ctx.fillStyle=TOK.teal;ctx.beginPath();ctx.ellipse(fx,yy-2,3,8*s+2,0,0,Math.PI*2);ctx.fill();}
+      stopwatch(ctx,w-12,24,t,running);label(ctx,C.n+' · push '+F+' N',12,24,{align:'left',size:14,mono:true});label(ctx,'speed '+fmt(v,2)+' m/s',12,46,{align:'left',size:14,mono:true,color:TOK.coral});
+      if(pred!=null)label(ctx,'you predicted '+fmt(pred,2)+' m/s each second',w-12,56,{align:'right',size:12,weight:700});
+      st.setCaption(running?'The fans push steadily. Watch the speed climb.':ran?`It gained ${fmt(v,2)} m/s in 2 seconds. That is ${fmt(a,2)} m/s each second.`+(testRun?'':' Recorded.'):'Pick a cart, choose how many fans push it, and tap Go.');}
+  };
+}
+
+// ---- 8. pendulum ----
+function simPend(controls,st){
+  let L=1,cur=1,phase=0,tm=null,shown=0,msg='';
+  const period=l=>2*Math.PI*Math.sqrt(l/9.81);
+  slider(controls,{id:'len',label:'String length',lo:'0.25 m',hi:'2 m',min:0.25,max:2,step:0.25,value:L,onInput:v=>{L=v;if(!tm){cur=v;msg='';}}});
+  button(controls,'Time 2 swings',()=>{if(st.testing||tm)return;cur=L;phase=0;tm={n:2,t:0};},{primary:true,id:'time2'});
+  return{
+    test(xs,pred,done){cur=xs;phase=0;tm={n:1,t:0,cb:done};},
+    draw(ctx,w,h,dt){const T=period(cur);phase+=dt/T;
+      if(tm){tm.t+=dt;shown=tm.t;if(phase>=tm.n){shown=T*tm.n;if(tm.cb){tm.cb(T);msg=`One swing of the 4 m pendulum took ${fmt(T,2)} s.`;}else{st.addPoint(cur,+T.toFixed(2));msg=`${fmt(cur,2)} m: ${fmt(T,2)} s per swing. Recorded.`;}tm=null;}}
+      const th=0.21*Math.cos(phase*Math.PI*2),px=w*0.5,py=h*0.05,len=cur/4.2*(h*0.86);
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);ctx.fillStyle='#5a6670';ctx.fillRect(px-50,py-8,100,8);
+      // metre marks beside the pendulum
+      ctx.strokeStyle=TOK.muted;ctx.lineWidth=1.5;for(let k=0;k<=4;k++){const Y=py+k/4.2*(h*0.86);ctx.beginPath();ctx.moveTo(w*0.14,Y);ctx.lineTo(w*0.14+12,Y);ctx.stroke();label(ctx,k+' m',w*0.14-6,Y,{size:11,align:'right',mono:true,color:TOK.muted});}
+      const bx=px+Math.sin(th)*len,by=py+Math.cos(th)*len;ctx.strokeStyle=TOK.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(bx,by);ctx.stroke();circle(ctx,bx,by,13,TOK.amber,TOK.ink);
+      stopwatch(ctx,w-12,24,shown,!!tm);label(ctx,'length '+fmt(cur,2)+' m',w-12,56,{align:'right',size:14,mono:true});
+      st.setCaption(tm?(tm.cb?'Testing: timing one swing of a 4 metre pendulum.':`Timing swing ${Math.min(tm.n,Math.floor(phase)+1)} of ${tm.n}...`):msg||'Set a length and tap Time 2 swings.');}
+  };
+}
+
+// ---- boot ----
+function route(){const id=location.hash.replace('#','');show(LESSONS.some(L=>L.id===id)?id:LESSONS[0].id);}
+window.addEventListener('hashchange',route);
+route();
+</script>
