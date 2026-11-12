@@ -1,0 +1,628 @@
+<title>Physics Playground</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;800&display=swap">
+<style>
+/* Layout: a workbench. Sticky lesson strip on top, one lesson at a time below it: picture, big idea, the live sim with its controls, things to try, what you saw, one tap-to-answer check. */
+:root{
+  --bg:#f1f4ef; --panel:#ffffff; --panel2:#e9eee9; --ink:#172529; --muted:#55666b; --line:#d2dbd6;
+  --teal:#0e7c73; --teal-soft:rgba(14,124,115,.14); --amber:#d99a2b; --coral:#dd5f44; --sky:#bfe0e8;
+  --good:#2a8a4a; --bad:#c2452c;
+  --display:"Fredoka","Trebuchet MS","Segoe UI",sans-serif;
+  --body:"Nunito","Segoe UI","Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0f1a1c; --panel:#16252a; --panel2:#1e3035; --ink:#e7efed; --muted:#9db1ad; --line:#2a3d42;
+  --teal:#2cc2b2; --teal-soft:rgba(44,194,178,.16); --amber:#f0b84e; --coral:#f2816a; --sky:#27515c;
+  --good:#5ccc82; --bad:#f08a76; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0f1a1c; --panel:#16252a; --panel2:#1e3035; --ink:#e7efed; --muted:#9db1ad; --line:#2a3d42;
+  --teal:#2cc2b2; --teal-soft:rgba(44,194,178,.16); --amber:#f0b84e; --coral:#f2816a; --sky:#27515c;
+  --good:#5ccc82; --bad:#f08a76; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(1.9rem,5vw,2.8rem)}
+h2{font-size:clamp(1.5rem,4vw,2.1rem)}
+h3{font-size:1.1rem}
+p{margin:0;max-width:62ch}
+.wrap{max-width:980px;margin:0 auto;display:grid;gap:22px}
+
+/* lesson strip */
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);padding-block:10px 8px;display:grid;gap:8px;border-bottom:1px solid var(--line)}
+.strip .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-weight:700;font-size:1.15rem;display:flex;align-items:center;gap:8px}
+.brand i{width:14px;height:14px;border-radius:50%;background:var(--coral);box-shadow:-18px 0 0 -2px var(--amber),-34px 0 0 -4px var(--teal);margin-left:34px}
+.count{font-size:.85rem;color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums}
+.lessons{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.lessons::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px 6px 8px;font:inherit;font-weight:800;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.chip b{width:22px;height:22px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-size:.75rem;color:var(--muted)}
+.chip.done b{background:var(--good);color:#fff}
+.chip[aria-current="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.chip[aria-current="true"] b{background:rgba(255,255,255,.25);color:#fff}
+.chip:focus-visible,button:focus-visible,input:focus-visible,.opt:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+/* lesson */
+.lesson{display:grid;gap:18px}
+.hero{display:grid;gap:14px;grid-template-columns:1fr;align-items:center}
+@media(min-width:700px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero img{width:100%;max-width:100%;border-radius:18px;aspect-ratio:16/9;object-fit:cover;background:var(--panel2);display:block}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);font-weight:800}
+.big{font-size:1.15rem;color:var(--muted);font-weight:600}
+.hero .txt{display:grid;gap:10px}
+
+.sim{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:grid}
+.sim canvas{display:block;width:100%;height:auto;touch-action:none;cursor:grab;background:var(--panel2)}
+.sim canvas.grabbing{cursor:grabbing}
+.sim .caption{padding:8px 14px;font-size:.9rem;color:var(--muted);font-weight:600;border-top:1px solid var(--line);min-height:38px;display:flex;align-items:center}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;padding:12px 14px;border-top:1px solid var(--line);align-items:end}
+.ctl{display:grid;gap:4px;min-width:0}
+.ctl .lab,.seg .lab{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.ctl input[type=range]{width:min(220px,60vw);accent-color:var(--teal)}
+.ctl .ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);font-weight:700}
+.seg{display:grid;gap:4px}
+.seg .row{display:flex;flex-wrap:wrap;gap:4px;background:var(--panel2);border-radius:10px;padding:3px}
+.seg button{font:inherit;font-weight:800;font-size:.85rem;border:0;background:transparent;color:var(--ink);padding:6px 11px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.btn{font:inherit;font-weight:800;font-size:.92rem;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer}
+.btn.primary{background:var(--coral);border-color:var(--coral);color:#fff}
+.btn.tog[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.two{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:700px){.two{grid-template-columns:1fr 1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:grid;gap:10px;align-content:start;min-width:0}
+.card h3{display:flex;align-items:center;gap:8px}
+.card h3 span{width:10px;height:10px;border-radius:50%;background:var(--amber);flex:0 0 auto}
+.card ul{margin:0;padding-left:1.2em;display:grid;gap:6px}
+.card li{padding-left:.2em}
+.saw{font-size:1rem}
+.opts{display:grid;gap:8px}
+.opt{font:inherit;text-align:left;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;font-weight:600;line-height:1.35}
+.opt[data-state="right"]{border-color:var(--good);background:color-mix(in srgb,var(--good) 16%,var(--panel))}
+.opt[data-state="wrong"]{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--panel))}
+.why{font-size:.95rem;color:var(--muted);font-weight:600;min-height:1.4em}
+.intro{grid-template-columns:1fr;gap:14px;padding:0;overflow:hidden}
+.intro img{width:100%;max-width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.intro>div{padding:4px 18px 18px;display:grid;gap:8px}
+@media(min-width:700px){.intro{grid-template-columns:1fr 1fr;align-items:center}.intro img{aspect-ratio:4/3;height:100%}.intro>div{padding:18px}}
+.nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+footer{color:var(--muted);font-size:.85rem;display:grid;gap:4px;border-top:1px solid var(--line);padding-top:14px}
+footer p{max-width:none}
+footer a{color:var(--teal)}
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto!important} }
+</style>
+
+<div class="wrap">
+  <div class="strip">
+    <div class="top">
+      <div class="brand"><i></i>Physics Playground</div>
+      <div class="count" id="count"></div>
+    </div>
+    <div class="lessons" id="lessons" role="tablist" aria-label="Lessons"></div>
+  </div>
+
+  <section class="lesson" id="lesson" aria-live="polite"></section>
+
+  <footer>
+    <p><strong>Physics Playground</strong> by David Berkowitz, with research from Anthropic Claude and images from Google Gemini Nano Banana. Ten hands-on lessons, no equations. Every picture on this page is a live model you can poke. Finished? <a href="https://claude.ai/artifact/5krBuLDXAgTaoudehPhVbV">Level 2</a> adds measuring and graphs.</p>
+    <p>Your progress is saved only on this device.</p>
+  </footer>
+</div>
+
+<script>
+'use strict';
+// ---------- tiny helpers ----------
+const $=(s,r=document)=>r.querySelector(s);
+function el(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='html')e.innerHTML=v;else e.setAttribute(k,v);}for(const k of kids){if(k==null)continue;e.append(k.nodeType?k:document.createTextNode(k));}return e;}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+let TOK={};function readTokens(){const cs=getComputedStyle(document.documentElement);TOK={};for(const k of['bg','panel','panel2','ink','muted','line','teal','amber','coral','sky','good','bad'])TOK[k]=cs.getPropertyValue('--'+k).trim();}
+readTokens();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readTokens);
+new MutationObserver(readTokens).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// control builders: each returns the control element and keeps a value
+function slider(parent,{id,label,lo,hi,min=0,max=1,step=0.01,value,onInput}){
+  const inp=el('input',{type:'range',id,min,max,step,value});
+  const box=el('div',{class:'ctl'},el('label',{class:'lab',for:id},label),inp,el('div',{class:'ends'},el('span',{},lo),el('span',{},hi)));
+  inp.addEventListener('input',()=>onInput(+inp.value));parent.append(box);return inp;
+}
+function seg(parent,{id,label,options,value,onChange}){
+  const row=el('div',{class:'row',role:'group','aria-label':label});
+  const btns=options.map(o=>{const b=el('button',{type:'button',id:id+'-'+o.v,'aria-pressed':String(o.v===value)},o.l);b.addEventListener('click',()=>{btns.forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');onChange(o.v);});return b;});
+  row.append(...btns);parent.append(el('div',{class:'seg'},el('span',{class:'lab'},label),row));
+  return {set(v){btns.forEach(x=>x.setAttribute('aria-pressed',String(x.id===id+'-'+v)));}};
+}
+function button(parent,label,onClick,{primary=false,id}={}){const b=el('button',{type:'button',class:'btn'+(primary?' primary':''),id:id||('b-'+label.replace(/\W+/g,'-').toLowerCase())},label);b.addEventListener('click',onClick);parent.append(b);return b;}
+function toggle(parent,{id,label,checked=false,onChange}){const b=el('button',{type:'button',class:'btn tog',id,'aria-pressed':String(checked)},label);b.addEventListener('click',()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));onChange(on);});parent.append(b);return b;}
+
+// drawing helpers
+function circle(ctx,x,y,r,fill,stroke){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}}
+function arrow(ctx,x1,y1,x2,y2,color,w=4){const a=Math.atan2(y2-y1,x2-x1),L=Math.hypot(x2-x1,y2-y1);if(L<2)return;ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2-Math.cos(a)*10,y2-Math.sin(a)*10);ctx.stroke();ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-Math.cos(a-.5)*14,y2-Math.sin(a-.5)*14);ctx.lineTo(x2-Math.cos(a+.5)*14,y2-Math.sin(a+.5)*14);ctx.closePath();ctx.fill();}
+function label(ctx,text,x,y,{size=14,color,align='center',weight=800}={}){ctx.font=`${weight} ${size}px Nunito, sans-serif`;ctx.fillStyle=color||TOK.ink;ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillText(text,x,y);}
+function stick(ctx,x,y,s,color,lean){ // little puller figure, lean -1..1
+  ctx.save();ctx.translate(x,y);ctx.rotate(lean*0.35);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=4;ctx.lineCap='round';
+  circle(ctx,0,-s*1.6,s*0.42,color);ctx.beginPath();ctx.moveTo(0,-s*1.15);ctx.lineTo(0,-s*0.2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-s*0.2);ctx.lineTo(-s*0.5,s*0.7);ctx.moveTo(0,-s*0.2);ctx.lineTo(s*0.5,s*0.7);ctx.stroke();ctx.restore();
+}
+
+// ---------- the lessons ----------
+const LESSONS=[
+{id:'motion',title:'Things keep going',big:'A moving thing does not stop on its own. Something has to slow it down.',
+ img:'img/motion.jpg',alt:'A red ball sliding across ice and stopping in grass',
+ tryList:['Flick the ball on ice, then on carpet. Where does it travel farther?','Switch to Space and flick. Wait for it to stop. (Keep waiting.)','Flick gently, then hard. Does a harder flick change how the ball slows, or only how far it goes?'],
+ saw:'The ball never "ran out of push." The floor rubbed on it and stole its motion a little at a time. Rough floors steal faster. In space there is nothing to rub, so it rolls forever. Scientists call the rubbing friction, and the keep-going-ness inertia.',
+ quiz:{q:'A hockey puck slides across the ice and slowly comes to a stop. Why?',opts:['It ran out of push','The ice rubs on it a tiny bit, and that rubbing slows it','Pucks always stop after a few seconds no matter what'],ans:1,why:'Even ice has a little grip. Less grip than carpet, so the puck goes far, but not forever.'},
+ sim:simMotion},
+{id:'forces',title:'Pushes and pulls',big:'When pushes are equal, nothing moves. When one side pushes harder, things move that way.',
+ img:'img/forces.jpg',alt:'Two teams of animals playing tug-of-war over a mud puddle',
+ tryList:['Give both teams the same number of pullers. Watch the rope.','Add one more puller to a side. Which way does the knot move?','Make it four against one. Does the knot move faster than three against two?'],
+ saw:'Every pull is a force. Forces on opposite sides cancel each other out. Only the leftover pull moves the rope, and a bigger leftover moves it faster. A still rope does not mean nobody is pulling; it means the pulls are balanced.',
+ quiz:{q:'Both teams pull exactly as hard as each other. What does the rope do?',opts:['Creeps toward the bigger-looking team','Stays put, even though everyone is pulling','Snaps'],ans:1,why:'Equal pulls cancel. The rope is under strain but it does not move. That is a balanced force.'},
+ sim:simForces},
+{id:'gravity',title:'Everything falls together',big:'Without air in the way, a feather and a hammer fall side by side.',
+ img:'img/gravity.jpg',alt:'An astronaut on the Moon dropping a feather and a hammer',
+ tryList:['Drop them on Earth with air. The feather floats down slowly.','Turn the air off and drop again.','Go to the Moon. There is no air there. Then watch the feather.'],
+ saw:'Gravity pulls on everything the same way, so everything speeds up at the same rate as it falls. The feather only looks slow on Earth because air pushes back on it. Take the air away and the race is a tie. Astronaut Dave Scott did this for real on the Moon in 1971.',
+ quiz:{q:'On the Moon, you drop a hammer and a feather at the same moment. Which lands first?',opts:['The hammer, because it is heavier','The feather, because it is lighter','They land at the same time'],ans:2,why:'No air on the Moon means nothing holds the feather back. Gravity treats both the same.'},
+ sim:simGravity},
+{id:'energy',title:'Hills and swings',big:'Height turns into speed, and speed turns back into height. Nothing is lost unless something rubs.',
+ img:'img/energy.jpg',alt:'A roller coaster car at the top of a tall hill about to plunge',
+ tryList:['Drag the ball partway up the first hill and let go. See how high it climbs the next hill.','Drag it to the very top. Can it clear the far hill now?','Switch the track to Sticky. Where does the ball end up?'],
+ saw:'A ball up high is storing something: the ability to move. Rolling down cashes that in for speed. Rolling up spends speed to buy height again. With a smooth track the ball always climbs back to its starting height and never higher. A sticky track leaks that stored motion into heat, so each climb is a little lower.',
+ quiz:{q:'On a perfectly smooth track, you let a ball go from partway up a hill. How high does it climb the next hill?',opts:['Higher than where it started','Up to the same height it started from, never higher','It stops at the bottom'],ans:1,why:'What it had in height becomes speed, then becomes height again. Same amount, same height.'},
+ sim:simEnergy},
+{id:'collisions',title:'Bump!',big:'When things crash, the heavier one mostly keeps going and the lighter one gets shoved.',
+ img:'img/collisions.jpg',alt:'A bowling ball scattering a line of marbles',
+ tryList:['Launch a big ball into a small one. Watch the big one.','Launch a small ball into a big one. Where does the small ball go?','Make them the same size. What happens to the first ball?','Turn on Sticky and try again.'],
+ saw:'Motion gets passed along in a crash, but it is shared out by weight. A heavy thing carries lots of motion and barely notices a light thing. A light thing hitting a heavy thing bounces back. Two equal things swap: one stops dead, the other takes off with its motion. Sticky crashes keep both moving together, slower.',
+ quiz:{q:'A bowling ball rolls into a single marble. What happens to the bowling ball?',opts:['It stops dead','It bounces straight back','It barely slows down'],ans:2,why:'The marble is too light to take much motion away. The bowling ball keeps nearly all of it.'},
+ sim:simCollisions},
+{id:'heat',title:'Hot is jiggly',big:'Hot means the tiny pieces inside are jiggling fast. Cold means they jiggle slowly.',
+ img:'img/heat.jpg',alt:'Cutaway of a hot cup and a cold cup side by side',
+ tryList:['Turn the left cup all the way cold. Watch the dots lock into place.','Turn it all the way hot. The dots break loose and fly.','Set one cup hot and one cold, then open the wall between them. Watch what happens to both.'],
+ saw:'Everything is made of tiny pieces that never sit still. More jiggle is what we feel as heat. Slow jiggle lets the pieces hold hands in a pattern: that is a solid. Faster, they slide past each other: a liquid. Faster still, they fly apart: a gas. When hot touches cold, the fast ones bump the slow ones until everybody jiggles about the same. Heat always flows from hot to cold, never the other way by itself.',
+ quiz:{q:'A hot cup and a cold cup sit touching each other. After a while, what do you find?',opts:['The hot one got hotter','Both ended up in between, the same as each other','Nothing changes until you stir'],ans:1,why:'Jiggle spreads out by bumping. It evens out, and it never piles up on one side by itself.'},
+ sim:simHeat},
+{id:'sound',title:'Wiggles you can hear',big:'Sound is something wiggling back and forth, shaking the air all the way to your ear.',
+ img:'img/sound.jpg',alt:'A child plucking a guitar string while a dog listens',
+ tryList:['Pull the string down and let go. Turn your sound on first.','Tighten the string and pluck again. Higher or lower?','Pluck gently, then pluck hard. What changes, and what stays the same?'],
+ saw:'A plucked string wiggles, and each wiggle gives the air next to it a shove. Those shoves travel outward as ripples. A tight string wiggles faster, and faster wiggles sound higher. A bigger wiggle shoves harder and sounds louder, but it does not change the note. Pitch comes from how fast, loudness from how big.',
+ quiz:{q:'You want a higher note from a string. What do you do?',opts:['Tighten the string so it wiggles faster','Pluck it harder','Loosen the string'],ans:0,why:'Tighter means faster wiggles. Faster wiggles are what we hear as a higher pitch. Plucking harder only makes it louder.'},
+ sim:simSound},
+{id:'light',title:'Light goes straight',big:'Light travels in straight lines, so anything in the way leaves a dark patch behind it.',
+ img:'img/light.jpg',alt:'A lamp casting a long shadow of a toy dinosaur on a wall',
+ tryList:['Drag the lamp close to the toy. What happens to the shadow on the wall?','Drag the lamp far away. Now?','Turn on the second lamp. Count the shadows and look at where they overlap.'],
+ saw:'Light leaves the lamp in every direction and keeps going straight. The toy blocks some of it, and the blocked lines mark out a shadow. Close to the lamp the toy blocks a wide fan of lines, so the shadow is huge. Two lamps make two shadows, and only where both are blocked is it fully dark.',
+ quiz:{q:'You move the lamp closer to the toy. The shadow on the wall gets...',opts:['Bigger','Smaller','It stays the same size'],ans:0,why:'Up close, the toy blocks a wider slice of the light fanning out from the lamp. The shadow spreads.'},
+ sim:simLight},
+{id:'magnets',title:'Push and pull without touching',big:'Magnets reach through empty space. Matching ends push apart, opposite ends pull together.',
+ img:'img/magnets.jpg',alt:'Two pairs of horseshoe magnets, one snapping together and one pushing apart',
+ tryList:['Drag the blue-and-red magnet toward the other one. Watch it react before they touch.','Tap Flip to turn the loose magnet around, then come close again.','Turn on the filings to see the invisible pattern around them.'],
+ saw:'A magnet has two ends, called north and south. North pulls south and pushes north. The pull or push works from a distance, and it gets stronger fast as the magnets get close. The pattern the filings make is the shape of that invisible reach. A compass is just a tiny magnet turning to line up with the Earth, which is a giant one.',
+ quiz:{q:'You bring two north ends toward each other. They...',opts:['Pull together','Push apart','Do nothing until they touch'],ans:1,why:'Same ends push. Opposite ends pull. And it all happens before anything touches.'},
+ sim:simMagnets},
+{id:'floating',title:'Why boats float',big:'Things float when they are less packed-in than water, and sink when they are more packed-in.',
+ img:'img/floating.jpg',alt:'A bathtub with a duck and a block floating and a stone and a key on the bottom',
+ tryList:['Drop a wooden block and a stone. Which goes down?','Drop the egg. Now add salt to the water with the slider.','Drop the ice cube. How much of it pokes out of the water?'],
+ saw:'Water pushes up on anything you put in it. If the thing is less tightly packed than water (a duck, wood, ice), that upward push wins and it floats. Packed tighter than water (stone, metal) and it sinks. Size does not matter: a giant log floats and a tiny key sinks. Salt packs the water tighter, which is why an egg floats in salty water and why it is easy to float in the sea.',
+ quiz:{q:'A huge wooden log floats but a tiny metal key sinks. Why?',opts:['Big things float, small things sink','It depends how tightly packed the stuff is compared to water, not how big it is','Wood is lighter than water in total'],ans:1,why:'A log weighs far more than a key, yet it floats. What matters is packing, not size or total weight.'},
+ sim:simFloating},
+];
+
+// ---------- runner ----------
+let progress={};try{progress=JSON.parse(localStorage.getItem('pp-progress')||'{}')||{};}catch(e){progress={};}
+function saveProgress(){try{localStorage.setItem('pp-progress',JSON.stringify(progress));}catch(e){}}
+let current=null,raf=0,active=null;
+
+function renderStrip(){
+  const host=$('#lessons');host.innerHTML='';
+  LESSONS.forEach((L,i)=>{
+    const c=el('button',{type:'button',class:'chip'+(progress[L.id]?' done':''),role:'tab','aria-current':String(current===L.id),id:'tab-'+L.id},el('b',{},progress[L.id]?'✓':String(i+1)),L.title);
+    c.addEventListener('click',()=>{location.hash=L.id;});host.append(c);
+  });
+  const n=Object.keys(progress).filter(k=>LESSONS.some(L=>L.id===k)).length;
+  $('#count').textContent=`${n} of ${LESSONS.length} done`;
+  const cur=$('#tab-'+current);if(cur)cur.scrollIntoView({inline:'center',block:'nearest',behavior:reduced?'auto':'smooth'});
+}
+
+function show(id){
+  const L=LESSONS.find(x=>x.id===id)||LESSONS[0];
+  if(active){active.stop();active=null;}
+  current=L.id;renderStrip();
+  const i=LESSONS.indexOf(L);
+  const host=$('#lesson');host.innerHTML='';
+  const canvas=el('canvas',{id:'cv-'+L.id,'aria-label':L.title+' simulation',role:'img'});
+  const controls=el('div',{class:'controls'});
+  const caption=el('div',{class:'caption',id:'cap-'+L.id});
+  const sim=el('div',{class:'sim'},canvas,caption,controls);
+
+  const opts=el('div',{class:'opts'});const why=el('p',{class:'why',id:'why-'+L.id});
+  L.quiz.opts.forEach((o,k)=>{const b=el('button',{type:'button',class:'opt',id:`q-${L.id}-${k}`},o);b.addEventListener('click',()=>{
+    opts.querySelectorAll('.opt').forEach(x=>x.removeAttribute('data-state'));
+    if(k===L.quiz.ans){b.dataset.state='right';why.textContent='Yes. '+L.quiz.why;progress[L.id]=1;saveProgress();renderStrip();}
+    else{b.dataset.state='wrong';why.textContent='Not quite. Try the sim again, then pick another answer.';}
+  });opts.append(b);});
+  if(progress[L.id]){const b=opts.children[L.quiz.ans];b.dataset.state='right';why.textContent='Yes. '+L.quiz.why;}
+
+  host.append(...[
+    i===0?el('div',{class:'card intro'},el('img',{src:'img/hero.jpg',alt:'A child and a small robot watching a ball roll down a hill, with a kite, magnet, lamp and ball floating around them'}),el('div',{},el('h1',{},'Start here'),el('p',{class:'big'},'Ten short lessons on how the world moves, with no equations. Every picture below the title is alive: drag it, tap it, change it, and watch what happens. Then answer one question to mark the lesson done.'))):null,
+    el('div',{class:'hero'},
+      el('img',{src:L.img,alt:L.alt,loading:'eager'}),
+      el('div',{class:'txt'},el('div',{class:'eyebrow'},`Lesson ${i+1} of ${LESSONS.length}`),el('h2',{},L.title),el('p',{class:'big'},L.big))),
+    sim,
+    el('div',{class:'two'},
+      el('div',{class:'card'},el('h3',{},el('span'),'Try this'),el('ul',{},...L.tryList.map(t=>el('li',{},t)))),
+      el('div',{class:'card'},el('h3',{},el('span'),'What you saw'),el('p',{class:'saw'},L.saw))),
+    el('div',{class:'card'},el('h3',{},el('span'),'Quick check'),el('p',{},L.quiz.q),opts,why),
+    el('div',{class:'nav'},
+      i>0?el('button',{type:'button',class:'btn',id:'prev',onclick:()=>{location.hash=LESSONS[i-1].id;}},'← '+LESSONS[i-1].title):el('span'),
+      i<LESSONS.length-1?el('button',{type:'button',class:'btn primary',id:'next',onclick:()=>{location.hash=LESSONS[i+1].id;}},'Next: '+LESSONS[i+1].title+' →'):el('span'))
+  ].filter(Boolean));
+  active=runSim(L.sim,canvas,controls,caption);
+  window.scrollTo({top:0,behavior:'auto'});
+}
+
+function runSim(factory,canvas,controls,caption){
+  const ctx=canvas.getContext('2d');let w=0,h=0,last=0,stopped=false;
+  const state={setCaption:t=>{caption.textContent=t;}};
+  const sim=factory(controls,state);
+  function fit(){const r=canvas.getBoundingClientRect();const cw=r.width;const ch=clamp(cw*0.6,220,420);const dpr=Math.min(2,devicePixelRatio||1);
+    canvas.style.height=ch+'px';canvas.width=Math.round(cw*dpr);canvas.height=Math.round(ch*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);w=cw;h=ch;if(sim.resize)sim.resize(w,h);}
+  fit();const ro=new ResizeObserver(()=>fit());ro.observe(canvas);
+  const pos=e=>{const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};};
+  let down=false;
+  canvas.addEventListener('pointerdown',e=>{down=true;canvas.setPointerCapture(e.pointerId);canvas.classList.add('grabbing');const p=pos(e);sim.pointer&&sim.pointer('down',p.x,p.y,w,h);});
+  canvas.addEventListener('pointermove',e=>{const p=pos(e);sim.pointer&&sim.pointer(down?'drag':'move',p.x,p.y,w,h);});
+  const up=e=>{if(!down)return;down=false;canvas.classList.remove('grabbing');const p=pos(e);sim.pointer&&sim.pointer('up',p.x,p.y,w,h);};
+  canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+  function frame(t){if(stopped)return;const dt=last?Math.min(0.033,(t-last)/1000):0.016;last=t;ctx.clearRect(0,0,w,h);sim.draw(ctx,w,h,dt);raf=requestAnimationFrame(frame);}
+  raf=requestAnimationFrame(frame);
+  return {stop(){stopped=true;cancelAnimationFrame(raf);ro.disconnect();sim.stop&&sim.stop();}};
+}
+
+// ---------- 1. motion ----------
+function simMotion(controls,st){
+  const F={ice:{d:70,name:'Ice'},wood:{d:380,name:'Wood floor'},carpet:{d:1400,name:'Carpet'},space:{d:0,name:'Space'}};
+  let floor='ice',x=0.25,v=0,drag=null,trail=[],spin=0,W=600;
+  const R=20;
+  seg(controls,{id:'floor',label:'Floor',options:[{v:'ice',l:'Ice'},{v:'wood',l:'Wood'},{v:'carpet',l:'Carpet'},{v:'space',l:'Space'}],value:floor,onChange:v=>{floor=v;}});
+  button(controls,'Push',()=>{v=520;trail=[];},{primary:true,id:'push'});
+  button(controls,'Reset',()=>{x=0.25;v=0;trail=[];},{id:'reset-motion'});
+  st.setCaption('Flick the ball with your finger, or tap Push.');
+  const stars=Array.from({length:50},()=>[Math.random(),Math.random(),Math.random()]);
+  return{
+    pointer(type,px,py,w,h){const bx=x*w,by=h*0.62;
+      if(type==='down'&&Math.hypot(px-bx,py-by)<R*2.2){drag={pts:[[px,performance.now()]]};}
+      else if(type==='drag'&&drag){drag.pts.push([px,performance.now()]);if(drag.pts.length>6)drag.pts.shift();x=clamp(px/w,0.03,0.97);v=0;}
+      else if(type==='up'&&drag){const p=drag.pts;if(p.length>1){const a=p[0],b=p[p.length-1];const dtm=(b[1]-a[1])/1000;if(dtm>0)v=clamp((b[0]-a[0])/dtm,-1400,1400);}drag=null;trail=[];}},
+    draw(ctx,w,h,dt){W=w;const gy=h*0.62+R;
+      // floor
+      ctx.fillStyle=floor==='space'?'#0b1026':floor==='ice'?TOK.sky:floor==='wood'?'#c99a5b':'#b7694f';
+      if(floor==='space'){ctx.fillRect(0,0,w,h);ctx.fillStyle='#fff';stars.forEach(s=>{ctx.globalAlpha=0.4+0.6*s[2];ctx.fillRect(s[0]*w,s[1]*h,1.6,1.6);});ctx.globalAlpha=1;}
+      else{ctx.fillRect(0,gy,w,h-gy);
+        if(floor==='wood'){ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=2;for(let i=0;i<w;i+=70){ctx.beginPath();ctx.moveTo(i,gy);ctx.lineTo(i,h);ctx.stroke();}}
+        if(floor==='carpet'){ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=2;for(let i=0;i<w;i+=9){ctx.beginPath();ctx.moveTo(i,gy+4);ctx.lineTo(i+4,gy+12);ctx.stroke();}}
+        if(floor==='ice'){ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=2;for(let i=20;i<w;i+=120){ctx.beginPath();ctx.moveTo(i,gy+10);ctx.lineTo(i+50,gy+30);ctx.stroke();}}
+      }
+      // physics
+      if(!drag){const d=F[floor].d;if(v>0)v=Math.max(0,v-d*dt);else if(v<0)v=Math.min(0,v+d*dt);x+=v*dt/w;
+        if(x>1.05)x=-0.05;if(x<-0.05)x=1.05;}
+      spin+=v*dt/R;
+      if(Math.abs(v)>1&&trail.length<60&&Math.random()<0.5)trail.push([x*w,gy-R]);
+      ctx.fillStyle=TOK.muted;trail.forEach((p,i)=>{ctx.globalAlpha=0.08+0.3*i/trail.length;circle(ctx,p[0],p[1],3,TOK.muted);});ctx.globalAlpha=1;
+      // ball
+      const bx=x*w,by=gy-R;ctx.save();ctx.translate(bx,by);ctx.rotate(spin);circle(ctx,0,0,R,TOK.coral);ctx.fillStyle='rgba(255,255,255,.75)';ctx.beginPath();ctx.arc(0,0,R*0.55,0,Math.PI);ctx.fill();ctx.restore();
+      ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(bx,gy+2,R*1.1,4,0,0,Math.PI*2);ctx.fill();
+      label(ctx,F[floor].name,14,22,{align:'left',color:floor==='space'?'#fff':TOK.ink});
+      const moving=Math.abs(v)>1;label(ctx,drag?'Flick!':moving?(floor==='space'?'Rolling... and rolling... and rolling':'Rolling'):'Stopped',w-14,22,{align:'right',color:floor==='space'?'#fff':TOK.muted,weight:700});
+    }
+  };
+}
+
+// ---------- 2. forces ----------
+function simForces(controls,st){
+  let L=2,R=2,pos=0,v=0,winner=null;
+  const cL=el('div',{class:'ctl'}),cR=el('div',{class:'ctl'});
+  function counter(box,labelText,get,set){box.append(el('span',{class:'lab'},labelText));const row=el('div',{style:'display:flex;gap:6px;align-items:center'});
+    const minus=el('button',{type:'button',class:'btn',id:labelText.replace(/\s/g,'-')+'-minus','aria-label':'fewer '+labelText},'−');const n=el('b',{style:'min-width:1.4em;text-align:center;font-size:1.2rem'},String(get()));const plus=el('button',{type:'button',class:'btn',id:labelText.replace(/\s/g,'-')+'-plus','aria-label':'more '+labelText},'+');
+    minus.addEventListener('click',()=>{set(Math.max(0,get()-1));n.textContent=get();reset();});plus.addEventListener('click',()=>{set(Math.min(5,get()+1));n.textContent=get();reset();});row.append(minus,n,plus);box.append(row);}
+  counter(cL,'Left team',()=>L,x=>L=x);counter(cR,'Right team',()=>R,x=>R=x);controls.append(cL,cR);
+  function reset(){pos=0;v=0;winner=null;}
+  button(controls,'Reset',reset,{id:'reset-forces'});
+  return{
+    draw(ctx,w,h,dt){const gy=h*0.72,cx=w/2;
+      if(!winner){const net=L-R;v+=net*0.9*dt;v*=0.985;pos+=v*dt;if(Math.abs(pos)>0.42){winner=pos>0?'right':'left';pos=Math.sign(pos)*0.42;}}
+      // ground and mud
+      ctx.fillStyle='#8fbf6b';ctx.fillRect(0,gy,w,h-gy);ctx.fillStyle='#6b4a2e';ctx.beginPath();ctx.ellipse(cx,gy+10,w*0.11,12,0,0,Math.PI*2);ctx.fill();
+      // rope
+      const knot=cx+pos*w;ctx.strokeStyle='#b58a4a';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(knot-w*0.46,gy-28);ctx.lineTo(knot+w*0.46,gy-28);ctx.stroke();
+      ctx.fillStyle=TOK.coral;ctx.fillRect(knot-6,gy-40,12,24);
+      ctx.strokeStyle=TOK.muted;ctx.setLineDash([4,6]);ctx.beginPath();ctx.moveTo(cx,gy-60);ctx.lineTo(cx,gy+2);ctx.stroke();ctx.setLineDash([]);
+      // pullers
+      const s=Math.min(26,h*0.075);
+      for(let i=0;i<L;i++)stick(ctx,knot-w*0.14-i*s*1.7,gy-8,s,TOK.teal,-0.8);
+      for(let i=0;i<R;i++)stick(ctx,knot+w*0.14+i*s*1.7,gy-8,s,TOK.amber,0.8);
+      // force arrows
+      const ay=h*0.2,unit=w*0.055;
+      if(L)arrow(ctx,cx-10,ay,cx-10-L*unit,ay,TOK.teal,8);if(R)arrow(ctx,cx+10,ay,cx+10+R*unit,ay,TOK.amber,8);
+      label(ctx,'pull',cx-10-L*unit/2,ay-18,{size:12,color:TOK.teal});label(ctx,'pull',cx+10+R*unit/2,ay-18,{size:12,color:TOK.amber});
+      let msg;if(winner)msg=(winner==='left'?'Left':'Right')+' team wins. The other side is in the mud.';else if(L===R)msg=L?'Balanced. Everyone is pulling, nobody moves.':'Nobody is pulling.';else msg=(L>R?'Left':'Right')+' pulls harder by '+Math.abs(L-R)+'. The knot slides that way.';
+      st.setCaption(msg);
+    }
+  };
+}
+
+// ---------- 3. gravity ----------
+function simGravity(controls,st){
+  let place='earth',air=true,dropped=false,t=0,hy=0,fy=0,hv=0,fv=0,hLand=null,fLand=null,sway=0;
+  const airBtn=toggle(controls,{id:'air',label:'Air on',checked:true,onChange:v=>{air=v;airBtn.textContent=v?'Air on':'Air off';reset();}});
+  seg(controls,{id:'place',label:'Where',options:[{v:'earth',l:'Earth'},{v:'moon',l:'Moon'}],value:'earth',onChange:v=>{place=v;airBtn.disabled=(v==='moon');if(v==='moon'){air=false;airBtn.setAttribute('aria-pressed','false');airBtn.textContent='No air here';}else{air=airBtn.getAttribute('aria-pressed')==='true';airBtn.textContent=air?'Air on':'Air off';}reset();}});
+  button(controls,'Drop',()=>{if(!dropped){dropped=true;}else reset();},{primary:true,id:'drop'});
+  function reset(){dropped=false;t=0;hy=fy=0;hv=fv=0;hLand=fLand=null;}
+  st.setCaption('Tap Drop. Watch who lands first.');
+  return{
+    draw(ctx,w,h,dt){const top=h*0.16,ground=h*0.86,fall=ground-top;const g=(place==='earth'?1.0:0.165)*fall*1.6;
+      if(dropped){t+=dt;
+        if(hLand==null){hv+=g*dt;hy+=hv*dt;if(hy>=fall){hy=fall;hLand=t;}}
+        if(fLand==null){const term=air?fall*0.22:1e9;fv=Math.min(fv+g*dt,term);fy+=fv*dt;if(air)sway+=dt*3;if(fy>=fall){fy=fall;fLand=t;}}}
+      // scene
+      if(place==='moon'){ctx.fillStyle='#0b0f1f';ctx.fillRect(0,0,w,h);ctx.fillStyle='#fff';for(let i=0;i<40;i++){ctx.fillRect(((i*97)%w),((i*53)%(ground-10)),1.5,1.5);}circle(ctx,w*0.85,h*0.2,16,'#4f86c6');ctx.fillStyle='#8c8f97';ctx.fillRect(0,ground,w,h-ground);}
+      else{ctx.fillStyle=TOK.sky;ctx.fillRect(0,0,w,ground);ctx.fillStyle='#8fbf6b';ctx.fillRect(0,ground,w,h-ground);}
+      if(air&&place==='earth'){ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=2;for(let i=0;i<6;i++){const y=top+i*fall/6+(t*20)%(fall/6);ctx.beginPath();ctx.moveTo(w*0.1,y);ctx.lineTo(w*0.14,y);ctx.stroke();}}
+      ctx.strokeStyle=TOK.muted;ctx.setLineDash([6,6]);ctx.beginPath();ctx.moveTo(0,top+22);ctx.lineTo(w,top+22);ctx.stroke();ctx.setLineDash([]);
+      const inkOn=place==='moon'?'#fff':TOK.ink;
+      // hammer
+      const hx=w*0.36,hyy=top+hy;ctx.fillStyle='#7a5230';ctx.fillRect(hx-4,hyy-22,8,44);ctx.fillStyle='#5b6670';ctx.fillRect(hx-16,hyy-28,32,16);
+      // feather
+      const fx=w*0.64+(air?Math.sin(sway)*14:0),fyy=top+fy;ctx.save();ctx.translate(fx,fyy);ctx.rotate(air&&dropped&&fLand==null?Math.cos(sway)*0.5:0);ctx.fillStyle='#f3f0e6';ctx.strokeStyle='#b9b2a0';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(0,0,8,24,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(0,-22);ctx.lineTo(0,26);ctx.stroke();ctx.restore();
+      label(ctx,'hammer',hx,ground+16,{size:13,color:inkOn});label(ctx,'feather',w*0.64,ground+16,{size:13,color:inkOn});
+      label(ctx,place==='earth'?'Earth':'The Moon',14,22,{align:'left',color:inkOn});
+      if(hLand!=null&&fLand!=null){const d=fLand-hLand;st.setCaption(d<0.05?'A tie. They landed together.':`The hammer landed first. The feather drifted down ${d>1.5?'much':'a little'} later, because air pushed back on it.`);}
+      else if(dropped)st.setCaption(hLand!=null?'Hammer is down. Feather still coming...':'Falling...');
+    }
+  };
+}
+
+// ---------- 4. energy ----------
+function simEnergy(controls,st){
+  const pts=[[0,1.0],[0.06,0.97],[0.3,0.0],[0.52,0.55],[0.72,0.08],[0.93,0.85],[1,0.9]];
+  function height(t){t=clamp(t,0,1);for(let i=0;i<pts.length-1;i++){const[a,ha]=pts[i],[b,hb]=pts[i+1];if(t<=b){const u=(t-a)/(b-a);const s=0.5-0.5*Math.cos(u*Math.PI);return ha+(hb-ha)*s;}}return pts[pts.length-1][1];}
+  let x=0.12,vt=0,fr=0,drag=false,startH=height(0.12),lost=0;
+  seg(controls,{id:'track',label:'Track',options:[{v:0,l:'Smooth'},{v:0.35,l:'A bit rough'},{v:1.4,l:'Sticky'}],value:0,onChange:v=>{fr=v;}});
+  button(controls,'Reset',()=>{x=0.12;vt=0;startH=height(x);lost=0;},{id:'reset-energy'});
+  st.setCaption('Drag the ball up a hill and let go.');
+  const R=14;
+  return{
+    pointer(type,px,py,w,h){if(type==='down'){drag=true;}if(drag&&(type==='down'||type==='drag')){x=clamp(px/w,0.04,0.96);vt=0;startH=height(x);lost=0;}if(type==='up'){drag=false;}},
+    draw(ctx,w,h,dt){const base=h*0.86,amp=h*0.66;const Y=t=>base-amp*height(t);
+      if(!drag){const e=0.002;const slope=(height(x+e)-height(x-e))/(2*e)*amp/w;const th=Math.atan(slope);const g=h*2.2;
+        vt+=g*Math.sin(th)*dt; const before=Math.abs(vt);vt*=Math.max(0,1-fr*dt);lost+=before-Math.abs(vt);
+        x+=vt*Math.cos(th)*dt/w;if(x<0.005){x=0.005;vt=Math.abs(vt)*0.3;}if(x>0.995){x=0.995;vt=-Math.abs(vt)*0.3;}}
+      // start-height line
+      const sy=base-amp*startH;ctx.strokeStyle=TOK.amber;ctx.setLineDash([6,6]);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,sy);ctx.lineTo(w,sy);ctx.stroke();ctx.setLineDash([]);label(ctx,'start height',w-10,sy-12,{size:12,align:'right',color:TOK.amber});
+      // track
+      ctx.beginPath();ctx.moveTo(0,h);for(let i=0;i<=120;i++){const t=i/120;ctx.lineTo(t*w,Y(t));}ctx.lineTo(w,h);ctx.closePath();ctx.fillStyle=fr>1?'#9a6a4a':fr>0?'#86a874':'#79b56a';ctx.fill();
+      ctx.strokeStyle=TOK.ink;ctx.lineWidth=3;ctx.beginPath();for(let i=0;i<=120;i++){const t=i/120;ctx[i?'lineTo':'moveTo'](t*w,Y(t));}ctx.stroke();
+      // ball
+      const e=0.002,sl=(height(x+e)-height(x-e))/(2*e)*amp/w,th=Math.atan(sl);const bx=x*w,by=Y(x)-R*Math.cos(th)-1,bxx=bx+R*Math.sin(th);
+      circle(ctx,bxx,by,R,TOK.coral,TOK.ink);
+      // speed bar
+      const sp=clamp(Math.abs(vt)/(h*1.6),0,1);label(ctx,'speed',14,22,{align:'left',size:12,color:TOK.muted});ctx.fillStyle=TOK.panel;ctx.fillRect(60,14,120,14);ctx.fillStyle=TOK.teal;ctx.fillRect(60,14,120*sp,14);ctx.strokeStyle=TOK.line;ctx.strokeRect(60,14,120,14);
+      label(ctx,'height',14,44,{align:'left',size:12,color:TOK.muted});ctx.fillStyle=TOK.panel;ctx.fillRect(60,36,120,14);ctx.fillStyle=TOK.amber;ctx.fillRect(60,36,120*clamp(height(x),0,1),14);ctx.strokeStyle=TOK.line;ctx.strokeRect(60,36,120,14);
+      if(!drag){const hh=height(x);if(fr===0)st.setCaption(hh>startH-0.02&&Math.abs(vt)<h*0.1?'Back at the start height, and no higher.':'Watch the speed bar fill as the height bar empties, then swap back.');
+        else st.setCaption('Some motion is leaking away as heat in the track. Each climb is lower than the last.');}
+    }
+  };
+}
+
+// ---------- 5. collisions ----------
+function simCollisions(controls,st){
+  const SIZES={s:{m:1,r:13,n:'small'},m:{m:3,r:22,n:'medium'},b:{m:9,r:36,n:'big'}};
+  let a='b',b='s',sticky=false,run=false,x1=0,x2=0,v1=0,v2=0,hit=false,tale='';
+  seg(controls,{id:'ball1',label:'Moving ball',options:[{v:'s',l:'Small'},{v:'m',l:'Medium'},{v:'b',l:'Big'}],value:a,onChange:v=>{a=v;reset();}});
+  seg(controls,{id:'ball2',label:'Resting ball',options:[{v:'s',l:'Small'},{v:'m',l:'Medium'},{v:'b',l:'Big'}],value:b,onChange:v=>{b=v;reset();}});
+  toggle(controls,{id:'sticky',label:'Sticky',onChange:v=>{sticky=v;reset();}});
+  button(controls,'Launch',()=>{reset();run=true;v1=300;},{primary:true,id:'launch'});
+  let W=600;function reset(){run=false;hit=false;tale='';x1=W*0.18;x2=W*0.6;v1=v2=0;}
+  st.setCaption('Pick two balls and tap Launch.');
+  return{resize(w){W=w;reset();},
+    draw(ctx,w,h,dt){const A=SIZES[a],B=SIZES[b],gy=h*0.7;const v0=300;
+      if(run){x1+=v1*dt;x2+=v2*dt;
+        if(!hit&&x1+A.r>=x2-B.r){hit=true;const m1=A.m,m2=B.m;
+          if(sticky){const vc=(m1*v1+m2*v2)/(m1+m2);v1=v2=vc;}
+          else{const n1=((m1-m2)*v1+2*m2*v2)/(m1+m2),n2=((m2-m1)*v2+2*m1*v1)/(m1+m2);v1=n1;v2=n2;}
+          x1=x2-B.r-A.r-0.5;
+          const s1=v1<-20?'bounced back':Math.abs(v1)<=20?'stopped dead':v1<0.6*v0?'slowed down a lot':v1<0.95*v0?'slowed a little':'barely noticed';
+          const s2=v2>1.5*v0?'shot off much faster than the first ball was going':v2>0.9*v0?'took off at about the same speed':v2>0.3*v0?'moved off, slower':'barely budged';
+          tale=`The ${A.n} ball ${s1}. The ${B.n} ball ${s2}.`+(sticky?' Stuck together, they share the motion.':'');}
+        if(x1>w+60&&x2>w+60||x1<-60)run=false;}
+      ctx.fillStyle='#d9b57a';ctx.fillRect(0,gy,w,h-gy);ctx.strokeStyle='rgba(0,0,0,.15)';for(let i=0;i<w;i+=48){ctx.beginPath();ctx.moveTo(i,gy);ctx.lineTo(i,h);ctx.stroke();}
+      circle(ctx,x1,gy-A.r,A.r,TOK.teal,TOK.ink);circle(ctx,x2,gy-B.r,B.r,TOK.amber,TOK.ink);
+      if(Math.abs(v1)>5)arrow(ctx,x1,gy-A.r*2-14,x1+v1*0.18,gy-A.r*2-14,TOK.teal,5);
+      if(Math.abs(v2)>5)arrow(ctx,x2,gy-B.r*2-14,x2+v2*0.18,gy-B.r*2-14,TOK.amber,5);
+      label(ctx,'arrows show how fast each ball is moving',14,22,{align:'left',size:12,color:TOK.muted,weight:700});
+      if(tale)st.setCaption(tale);else if(run)st.setCaption('Here it comes...');
+    }
+  };
+}
+
+// ---------- 6. heat ----------
+function simHeat(controls,st){
+  let TL=0.85,TR=0.1,open=false;const N=36;
+  function makeBox(){const ps=[];const cols=6;for(let i=0;i<N;i++){const gx=(i%cols+0.5)/cols,gy=(Math.floor(i/cols)+0.5)/cols;ps.push({hx:gx,hy:gy,x:gx,y:gy,vx:(Math.random()-.5),vy:(Math.random()-.5)});}return ps;}
+  const boxes=[makeBox(),makeBox()];
+  const sL=slider(controls,{id:'tl',label:'Left cup',lo:'cold',hi:'hot',value:TL,onInput:v=>TL=v});
+  const sR=slider(controls,{id:'tr',label:'Right cup',lo:'cold',hi:'hot',value:TR,onInput:v=>TR=v});
+  const wall=toggle(controls,{id:'wall',label:'Let them touch',onChange:v=>{open=v;wall.textContent=v?'Touching':'Let them touch';}});
+  const stateOf=T=>T<0.22?'solid':T<0.62?'liquid':'gas';
+  const col=T=>`hsl(${lerp(215,8,T)} 75% ${lerp(58,52,T)}%)`;
+  return{
+    draw(ctx,w,h,dt){
+      if(open){const mean=(TL+TR)/2;TL+=(mean-TL)*dt*0.5;TR+=(mean-TR)*dt*0.5;sL.value=TL;sR.value=TR;}
+      const pad=14,bw=(w-pad*3)/2,bh=h*0.74,by=h*0.1;
+      [[pad,TL],[pad*2+bw,TR]].forEach(([bx,T],k)=>{
+        const s=stateOf(T);
+        ctx.fillStyle=TOK.panel;ctx.fillRect(bx,by,bw,bh);ctx.strokeStyle=TOK.line;ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
+        // thermometer
+        ctx.fillStyle=TOK.panel2;ctx.fillRect(bx+bw-18,by+10,8,bh-20);ctx.fillStyle=col(T);ctx.fillRect(bx+bw-18,by+10+(bh-20)*(1-T),8,(bh-20)*T);
+        const speed=(0.08+T*1.1)*Math.min(bw,bh)*1.2;
+        for(const p of boxes[k]){
+          if(s==='solid'){const amp=0.012+T*0.03;p.x+= (p.hx-p.x)*dt*6 + (Math.random()-.5)*amp*0.6;p.y+=(p.hy-p.y)*dt*6+(Math.random()-.5)*amp*0.6;}
+          else{const sp=Math.hypot(p.vx,p.vy)||1;const want=s==='gas'?1:0.45;p.vx=p.vx/sp*want;p.vy=p.vy/sp*want;
+            const ymin=s==='liquid'?0.5:0.04; if(s==='liquid'&&p.y<ymin)p.y+=0.6*dt; // a liquid settles into the bottom of the cup
+            p.vx+=(Math.random()-.5)*0.3;p.vy+=(Math.random()-.5)*0.3;
+            p.x+=p.vx*speed*dt/bw;p.y+=p.vy*speed*dt/bh;
+            if(p.x<0.04){p.x=0.04;p.vx=Math.abs(p.vx);}if(p.x>0.9){p.x=0.9;p.vx=-Math.abs(p.vx);}if(p.y<ymin){p.y=ymin;p.vy=Math.abs(p.vy);}if(p.y>0.96){p.y=0.96;p.vy=-Math.abs(p.vy);}}
+          circle(ctx,bx+p.x*bw,by+p.y*bh,Math.max(4,Math.min(bw,bh)*0.03),col(T));
+        }
+        label(ctx,s==='solid'?'frozen solid':s==='liquid'?'liquid':'steam',bx+bw/2,by+bh+18,{size:14,color:TOK.ink});
+      });
+      // wall
+      ctx.fillStyle=open?TOK.teal:TOK.ink;ctx.fillRect(w/2-3,by,6,bh);
+      if(open&&Math.abs(TL-TR)<0.03)st.setCaption('Evened out. Both cups jiggle the same now.');else if(open)st.setCaption('The fast dots bump the slow dots through the wall. Hot cools, cold warms.');else st.setCaption('Slide a cup colder or hotter. Watch the dots change how they move.');
+    }
+  };
+}
+
+// ---------- 7. sound ----------
+function simSound(controls,st){
+  let tight=0.4,A=0,phase=0,t0=0,plucking=false,pullY=0,rings=[],ac=null,lastF=0;
+  const freq=()=>lerp(110,660,tight);
+  slider(controls,{id:'tight',label:'String tightness',lo:'loose (low)',hi:'tight (high)',value:tight,onInput:v=>{tight=v;}});
+  button(controls,'Pluck',()=>release(0.8),{primary:true,id:'pluck'});
+  function tone(f,vol){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0.0001,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.35*vol,ac.currentTime+0.01);g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+1.6);o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+1.7);}catch(e){}}
+  function release(amp){A=clamp(amp,0.1,1);t0=performance.now()/1000;lastF=freq();rings=[];tone(lastF,A);}
+  st.setCaption('Pull the string down and let go, or tap Pluck. Sound on.');
+  return{
+    pointer(type,px,py,w,h){const mid=h*0.42;if(type==='down'){plucking=true;A=0;}if(plucking&&(type==='down'||type==='drag')){pullY=clamp(py-mid,-h*0.3,h*0.3);}if(type==='up'&&plucking){plucking=false;release(Math.abs(pullY)/(h*0.3));pullY=0;}},
+    draw(ctx,w,h,dt){const mid=h*0.42,x0=w*0.06,x1=w*0.62,L=x1-x0;const t=performance.now()/1000-t0;
+      const env=plucking?0:A*Math.exp(-t*1.1);const vis=lastF/55;
+      // string
+      ctx.strokeStyle=TOK.ink;ctx.lineWidth=3;ctx.beginPath();for(let i=0;i<=80;i++){const u=i/80,x=x0+u*L;let y;
+        if(plucking){y=mid+pullY*Math.sin(u*Math.PI);}else{y=mid+env*h*0.28*Math.sin(u*Math.PI)*Math.cos(t*vis*Math.PI*2);}
+        ctx[i?'lineTo':'moveTo'](x,y);}ctx.stroke();
+      ctx.fillStyle=TOK.muted;ctx.fillRect(x0-8,mid-26,8,52);ctx.fillRect(x1,mid-26,8,52);
+      // rings
+      if(env>0.02&&!reduced){const period=1/(lerp(2.5,7,tight));if(!rings.length||t-rings[rings.length-1].t>period/2)rings.push({t,a:env});}
+      rings=rings.filter(r=>t-r.t<1.6);
+      ctx.lineWidth=2;for(const r of rings){const age=t-r.t;const rad=age*w*0.35;ctx.strokeStyle=TOK.teal;ctx.globalAlpha=clamp(r.a*(1-age/1.6),0,1);ctx.beginPath();ctx.arc(x1+4,mid,rad,-Math.PI/2.6,Math.PI/2.6);ctx.stroke();}ctx.globalAlpha=1;
+      // ear
+      circle(ctx,w*0.9,mid,22,TOK.amber,TOK.ink);circle(ctx,w*0.9,mid,10,TOK.panel,TOK.ink);
+      label(ctx,'listener',w*0.9,mid+40,{size:12,color:TOK.muted});
+      label(ctx,tight<0.33?'loose: slow wiggle, low note':tight<0.66?'medium wiggle, middle note':'tight: fast wiggle, high note',14,22,{align:'left',size:13,color:TOK.ink});
+      const loud=env>0.5?'loud':env>0.12?'quiet':env>0.02?'fading':'silent';label(ctx,loud,w-14,22,{align:'right',size:13,color:TOK.muted});
+    }
+  };
+}
+
+// ---------- 8. light ----------
+function simLight(controls,st){
+  let lamp={x:0.18,y:0.5},lamp2={x:0.22,y:0.22},two=false,toy={x:0.5,y:0.5,hh:0.16},drag=null;
+  toggle(controls,{id:'lamp2',label:'Second lamp',onChange:v=>two=v});
+  button(controls,'Reset',()=>{lamp={x:0.18,y:0.5};lamp2={x:0.22,y:0.22};toy={x:0.5,y:0.5,hh:0.16};},{id:'reset-light'});
+  st.setCaption('Drag the lamp or the toy.');
+  function shadowOnWall(l,w,h,wallX){const lx=l.x*w,ly=l.y*h,tx=toy.x*w,ty1=(toy.y-toy.hh)*h,ty2=(toy.y+toy.hh)*h;if(tx<=lx)return null;
+    const k=(wallX-lx)/(tx-lx);return{y1:ly+(ty1-ly)*k,y2:ly+(ty2-ly)*k,lx,ly,tx,ty1,ty2};}
+  return{
+    pointer(type,px,py,w,h){const near=(o)=>Math.hypot(px-o.x*w,py-o.y*h)<34;
+      if(type==='down'){drag=near(lamp)?lamp:(two&&near(lamp2))?lamp2:(Math.abs(px-toy.x*w)<30&&Math.abs(py-toy.y*h)<toy.hh*h+10)?toy:null;}
+      if(drag&&(type==='down'||type==='drag')){drag.x=clamp(px/w,0.04,0.8);drag.y=clamp(py/h,0.08,0.92);}
+      if(type==='up')drag=null;},
+    draw(ctx,w,h){const wallX=w-26;
+      ctx.fillStyle='#2a2e3a';ctx.fillRect(0,0,w,h);
+      // light cones and shadows
+      const lamps=two?[lamp,lamp2]:[lamp];const sh=[];
+      for(const l of lamps){const lx=l.x*w,ly=l.y*h;
+        const grd=ctx.createRadialGradient(lx,ly,0,lx,ly,w);grd.addColorStop(0,'rgba(255,220,140,.55)');grd.addColorStop(1,'rgba(255,220,140,0)');ctx.fillStyle=grd;ctx.fillRect(0,0,w,h);
+        const s=shadowOnWall(l,w,h,wallX);if(s)sh.push(s);}
+      ctx.globalCompositeOperation='source-over';
+      for(const s of sh){ctx.fillStyle='rgba(10,10,20,.55)';ctx.beginPath();ctx.moveTo(s.tx,s.ty1);ctx.lineTo(wallX,s.y1);ctx.lineTo(wallX,s.y2);ctx.lineTo(s.tx,s.ty2);ctx.closePath();ctx.fill();}
+      // rays
+      for(const l of lamps){const lx=l.x*w,ly=l.y*h;ctx.strokeStyle='rgba(255,230,160,.35)';ctx.lineWidth=1;for(let i=-10;i<=10;i++){const ang=i*0.1;const dx=Math.cos(ang),dy=Math.sin(ang);let len=(wallX-lx)/dx;
+          const tx=toy.x*w;if(tx>lx){const k=(tx-lx)/dx;const yAt=ly+dy*k;if(yAt>(toy.y-toy.hh)*h&&yAt<(toy.y+toy.hh)*h)len=k;}
+          ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+dx*len,ly+dy*len);ctx.stroke();}}
+      // wall
+      ctx.fillStyle='#c9c2b6';ctx.fillRect(wallX,0,26,h);
+      for(const s of sh){ctx.fillStyle='rgba(20,20,30,.55)';ctx.fillRect(wallX,Math.min(s.y1,s.y2),26,Math.abs(s.y2-s.y1));}
+      // toy
+      const tx=toy.x*w,ty=toy.y*h,hh=toy.hh*h;ctx.fillStyle=TOK.coral;ctx.beginPath();ctx.roundRect(tx-16,ty-hh,32,hh*2,8);ctx.fill();circle(ctx,tx,ty-hh+10,6,'#fff');
+      // lamps
+      lamps.forEach((l,i)=>{const lx=l.x*w,ly=l.y*h;circle(ctx,lx,ly,16,'#ffd978','#b8923a');label(ctx,i?'lamp 2':'lamp',lx,ly+30,{size:12,color:'#f3f0e6'});});
+      label(ctx,'wall',wallX+13,16,{size:11,color:'#2a2e3a'});
+      const main=sh[0];if(main){const size=Math.abs(main.y2-main.y1)/(toy.hh*2*h);st.setCaption(size>2.2?'Huge shadow. The lamp is close, so the toy blocks a wide fan of light.':size>1.25?'The shadow is bigger than the toy.':'The shadow is about the size of the toy. The lamp is far, so the rays are nearly parallel.'+(two?' Two lamps, two shadows.':''));}
+      else st.setCaption('The lamp is behind the toy, so the shadow falls off the wall.');
+    }
+  };
+}
+
+// ---------- 9. magnets ----------
+function simMagnets(controls,st){
+  let A={x:0.3,y:0.5,a:0},B={x:0.7,y:0.5,a:0,vx:0,vy:0,va:0},drag=false,filings=false,W=600,H=360;
+  const LEN=0.18;
+  toggle(controls,{id:'filings',label:'Show filings',onChange:v=>filings=v});
+  button(controls,'Flip loose magnet',()=>{B.a+=Math.PI;},{id:'flip'});
+  button(controls,'Reset',()=>{A={x:0.3,y:0.5,a:0};B={x:0.7,y:0.5,a:0,vx:0,vy:0,va:0};},{id:'reset-mag'});
+  st.setCaption('Drag the left magnet toward the right one.');
+  function poles(m){const L=LEN*W/2;return[{x:m.x*W+Math.cos(m.a)*L,y:m.y*H+Math.sin(m.a)*L,q:1},{x:m.x*W-Math.cos(m.a)*L,y:m.y*H-Math.sin(m.a)*L,q:-1}];}
+  function field(x,y){let fx=0,fy=0;for(const m of[A,B])for(const p of poles(m)){const dx=x-p.x,dy=y-p.y;const r2=dx*dx+dy*dy+400;const r=Math.sqrt(r2);fx+=p.q*dx/(r2*r);fy+=p.q*dy/(r2*r);}return[fx,fy];}
+  return{resize(w,h){W=w;H=h;},
+    pointer(type,px,py,w,h){if(type==='down'&&Math.hypot(px-A.x*w,py-A.y*h)<LEN*w*0.6)drag=true;if(drag&&(type==='down'||type==='drag')){A.x=clamp(px/w,0.1,0.9);A.y=clamp(py/h,0.12,0.88);}if(type==='up')drag=false;},
+    draw(ctx,w,h,dt){
+      // forces on B from A
+      const pa=poles(A),pb=poles(B);let Fx=0,Fy=0,T=0;const K=w*w*h*2.2;
+      for(const q of pb)for(const p of pa){const dx=q.x-p.x,dy=q.y-p.y;const r2=dx*dx+dy*dy+900;const r=Math.sqrt(r2);const f=K*q.q*p.q/(r2*r);const fx=dx*f,fy=dy*f;Fx+=fx;Fy+=fy;T+=(q.x-B.x*w)*fy-(q.y-B.y*h)*fx;}
+      B.vx+=Fx*dt;B.vy+=Fy*dt;B.va+=T/(w*w*0.01)*dt;B.vx*=0.92;B.vy*=0.92;B.va*=0.9;
+      B.x+=B.vx*dt/w;B.y+=B.vy*dt/h;B.a+=B.va*dt;B.x=clamp(B.x,0.1,0.9);B.y=clamp(B.y,0.12,0.88);
+      // keep apart (contact)
+      const dx=(B.x-A.x)*w,dy=(B.y-A.y)*h,d=Math.hypot(dx,dy),minD=LEN*w*1.02;if(d<minD){const push=(minD-d);B.x+=dx/d*push/w;B.y+=dy/d*push/h;B.vx=B.vy=0;}
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);
+      if(filings){ctx.strokeStyle=TOK.muted;ctx.lineWidth=1.5;const step=22;for(let x=step/2;x<w;x+=step)for(let y=step/2;y<h;y+=step){const[fx,fy]=field(x,y);const m=Math.hypot(fx,fy)||1;const s=7;ctx.globalAlpha=clamp(m*4e6,0.15,0.9);ctx.beginPath();ctx.moveTo(x-fx/m*s,y-fy/m*s);ctx.lineTo(x+fx/m*s,y+fy/m*s);ctx.stroke();}ctx.globalAlpha=1;}
+      // interaction hint arrow on B
+      const Fm=Math.hypot(Fx,Fy);if(Fm>w*0.5)arrow(ctx,B.x*w,B.y*h-34,B.x*w+Fx/Fm*Math.min(70,Fm/w*8),B.y*h-34-Fy/Fm*0+ Fy/Fm*Math.min(70,Fm/w*8),TOK.ink,4);
+      for(const m of[A,B]){const L=LEN*w,hh=Math.min(26,h*0.08);ctx.save();ctx.translate(m.x*w,m.y*h);ctx.rotate(m.a);ctx.fillStyle='#d9534f';ctx.fillRect(0,-hh/2,L/2,hh);ctx.fillStyle='#3b6fd1';ctx.fillRect(-L/2,-hh/2,L/2,hh);ctx.strokeStyle=TOK.ink;ctx.lineWidth=2;ctx.strokeRect(-L/2,-hh/2,L,hh);
+        ctx.fillStyle='#fff';ctx.font='800 14px Nunito, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('N',L/4,0);ctx.fillText('S',-L/4,0);ctx.restore();}
+      label(ctx,'drag me',A.x*w,A.y*h-26,{size:12,color:TOK.muted});
+      // caption from facing poles
+      const facing=(()=>{const ax=A.x*w,bx=B.x*w;const aRight=Math.cos(A.a)>0?1:-1,bRight=Math.cos(B.a)>0?1:-1;const aFace=bx>ax?aRight:-aRight,bFace=bx>ax?-bRight:bRight;return aFace===bFace?'same':'opposite';})();
+      const near=d<w*0.45;st.setCaption(!near?'Too far apart to feel much. Bring them closer.':facing==='same'?'Same ends face each other. The loose magnet is being pushed away, and tries to turn around.':'Opposite ends face each other. The loose magnet is being pulled in.');
+    }
+  };
+}
+
+// ---------- 10. floating ----------
+function simFloating(controls,st){
+  const KINDS=[{n:'duck',d:0.3,c:'#f2c230',w:34,h:28},{n:'wood block',d:0.6,c:'#b8864f',w:40,h:30},{n:'apple',d:0.85,c:'#d84a3a',w:30,h:30},{n:'ice cube',d:0.92,c:'#cfe9f3',w:30,h:30},{n:'egg',d:1.03,c:'#f3ead8',w:24,h:32},{n:'grape',d:1.1,c:'#7a4b9c',w:18,h:18},{n:'stone',d:2.7,c:'#777d86',w:30,h:24},{n:'key',d:7.8,c:'#c7a84a',w:34,h:12}];
+  let objs=[],salt=0,W=600,H=360;
+  const picker=el('div',{class:'seg'},el('span',{class:'lab'},'Drop in'));const row=el('div',{class:'row'});KINDS.forEach(k=>{const b=el('button',{type:'button',id:'drop-'+k.n.replace(/\s/g,'-')},k.n);b.addEventListener('click',()=>{if(objs.length>=9)objs.shift();objs.push({k,x:0.12+Math.random()*0.76,y:0.06,vy:0});});row.append(b);});picker.append(row);controls.append(picker);
+  slider(controls,{id:'salt',label:'Salt in the water',lo:'fresh',hi:'very salty',value:0,onInput:v=>salt=v});
+  button(controls,'Empty the tub',()=>{objs=[];},{id:'empty'});
+  st.setCaption('Tap a thing to drop it in.');
+  return{resize(w,h){W=w;H=h;},
+    draw(ctx,w,h,dt){const waterY=h*0.4,floor=h*0.95,rhoW=1+salt*0.2;const g=h*1.2;
+      ctx.fillStyle=TOK.panel;ctx.fillRect(0,0,w,h);
+      ctx.fillStyle=`hsl(${196-salt*10} ${60+salt*10}% ${TOK.bg.startsWith('#0')?30:72}%)`;ctx.fillRect(0,waterY,w,floor-waterY);
+      ctx.fillStyle=TOK.line;ctx.fillRect(0,floor,w,h-floor);
+      for(const o of objs){const hh=o.k.h;const top=o.y*h-hh/2,bot=o.y*h+hh/2;const sub=clamp((bot-waterY)/hh,0,1);
+        const a=g*(1-rhoW*sub/o.k.d);o.vy+=a*dt;o.vy*=(1-3.5*sub*dt);o.y+=o.vy*dt/h;
+        if(o.y*h+hh/2>floor){o.y=(floor-hh/2)/h;o.vy=0;}
+        ctx.fillStyle=o.k.c;ctx.beginPath();ctx.roundRect(o.x*w-o.k.w/2,o.y*h-hh/2,o.k.w,hh,o.k.n==='key'?3:10);ctx.fill();ctx.strokeStyle=TOK.ink;ctx.lineWidth=1.5;ctx.stroke();
+        label(ctx,o.k.n,o.x*w,o.y*h-hh/2-10,{size:11,color:TOK.ink,weight:700});}
+      label(ctx,salt<0.1?'fresh water':salt<0.6?'salty water':'very salty water',14,waterY-12,{align:'left',size:12,color:TOK.muted});
+      const fl=objs.filter(o=>o.k.d<rhoW).length,sk=objs.length-fl;
+      if(objs.length)st.setCaption(`${fl} floating, ${sk} on the bottom.`+(objs.some(o=>o.k.n==='egg')&&salt<0.2?' The egg just sinks in fresh water. Try adding salt.':''));
+    }
+  };
+}
+
+// ---------- boot ----------
+function route(){const id=location.hash.replace('#','');show(LESSONS.some(L=>L.id===id)?id:LESSONS[0].id);}
+window.addEventListener('hashchange',route);
+route();
+</script>
