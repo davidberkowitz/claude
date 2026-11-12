@@ -153,7 +153,7 @@ footer p{max-width:none}
   </div>
   <section class="lesson" id="lesson" aria-live="polite"></section>
   <footer>
-    <p><strong>Physics Playground, Level 3</strong> by David Berkowitz, with research from Anthropic Claude, images from Google Gemini Nano Banana and narration from Google Gemini text-to-speech. Eight lessons that turn your measurements into formulas. Earlier levels: <a href="https://claude.ai/artifact/PTzxi4b6AHsBdkhferfwpg">Level 1</a> and <a href="https://claude.ai/artifact/5krBuLDXAgTaoudehPhVbV">Level 2</a>.</p>
+    <p><strong>Physics Playground, Level 3</strong> by David Berkowitz, with research from Anthropic Claude, images from Google Gemini Nano Banana and narration from Google Gemini text-to-speech. Ten lessons that turn your measurements into formulas. Earlier levels: <a href="https://claude.ai/artifact/PTzxi4b6AHsBdkhferfwpg">Level 1</a> and <a href="https://claude.ai/artifact/5krBuLDXAgTaoudehPhVbV">Level 2</a>.</p>
     <p>Your progress is saved only on this device.</p>
   </footer>
 </div>
@@ -306,6 +306,26 @@ const LESSONS=[
  tryList:['Set a length and time the swings. Do at least three lengths.','Fit the number to your dots.','Predict the swing time of a 4 metre pendulum. The square root of 4 is 2.','Test it and watch the long pendulum swing.'],
  saw:'On Earth the number is very close to 2. A 1 metre pendulum takes 2 seconds and a 4 metre one takes 4. The full formula has gravity inside it, which is why a pendulum clock would run slow on the Moon. For centuries, pendulums were how people kept time and how they measured gravity.',
  sim:simPend},
+{id:'energy',title:'Height becomes speed',big:'Roll a ball down from a height and clock it at the bottom. The speed follows the height by a square-root rule.',
+ img:'img3/energyrule.jpg',alt:'A red ball rolling down a smooth curved ramp through a light-beam gate at the bottom',
+ gtitle:'Speed at the bottom (m/s) against start height (m)',xl:'start height (m)',yl:'speed at the bottom (m/s)',xmax:4.5,ymax:10,xstep:1,ystep:2,xd:1,yd:1,
+ words:'A higher start gives more speed, but not in a straight line. Four times the height only doubles the speed. That pattern is a square root. So the speed is a number, times the square root of the height.',
+ say:'As a formula: speed equals a number times the square root of the height.',
+ formula:{html:c=>`speed = <b>${c}</b> × √height`,f:(x,c)=>c*Math.sqrt(x),min:1,max:8,step:0.1,start:2,cd:1,short:'Scientists write v = √(2 × g × h). On Earth your number comes to about 4.4, which is the square root of 2 times 9.8.',work:(c,y)=>`${c} × √4 = ${c} × 2 = ${y}`},
+ predict:{q:'How fast will the ball be going at the bottom of a 4 metre ramp, taller than any you measured?',x:4,unit:'m/s'},
+ tryList:['Choose a start height and tap Release. The speed gate records a dot.','Measure at three or more heights.','Fit the number. The line curves over: four times the height only doubles the speed.','Predict the speed from a 4 metre ramp, then test it.'],
+ saw:'Height stored becomes speed paid out. The number you fitted is the square root of two times g, about 4.4 on Earth, so the 9.8 from the falling lessons is hiding inside it. Square both sides and the rule reads speed squared equals 2 times g times height. That is the energy idea from Level 1, now with a number on it. If nothing rubs, it tells you how fast a skier is going at the bottom of a hill, whatever the skier weighs.',
+ sim:simEnergy},
+{id:'wave',title:'Ripples and rules',big:'Dip faster and the ripples bunch together. The gap between them follows a rule you can fit.',
+ img:'img3/waverule.jpg',alt:'A ripple tank seen from above with a dipper making circular ripples and a ruler across the tank',
+ gtitle:'Gap between ripples (cm) against frequency (Hz)',xl:'frequency (ripples per second)',yl:'gap between ripples (cm)',xmax:10,ymax:12,xstep:2,ystep:3,xd:0,yd:1,
+ words:'Faster dipping packs the ripples closer together. Twice the dips each second, half the gap. So the gap is one fixed number, divided by the frequency.',
+ say:'As a formula: gap equals a number divided by the frequency.',
+ formula:{html:c=>`gap = <b>${c}</b> ÷ frequency`,f:(x,c)=>c/x,min:4,max:30,step:0.5,start:8,cd:1,short:'Your number is how fast the ripples travel, in centimetres per second. Scientists call the gap the wavelength and write wavelength = speed ÷ frequency.',work:(c,y)=>`${c} ÷ 10 = ${y}`},
+ predict:{q:'The dipper speeds up to 10 ripples a second. How far apart will the ripples be?',x:10,unit:'cm'},
+ tryList:['Pick shallow or deep water, set the dipper frequency, and tap Measure. The ruler shows the gap between ripples.','Measure at three or more frequencies.','Fit the number. The line is a curve that dives and then flattens.','Predict the gap at 10 ripples a second and test it. Then switch the water and try again.'],
+ saw:'The number you fitted is how fast the ripples travel. It belongs to the water, not the dipper: deeper water carries ripples faster. Dip faster and the ripples are made faster than they can spread out, so they bunch up. The same rule governs sound and light. A note of 440 hertz travels at 343 metres per second, so its wavelength is 343 divided by 440, a bit under 0.8 metres.',
+ sim:simWave},
 ];
 const WELCOME_TITLE='Level 3: write the rule';
 const WELCOME='Level 1 was feeling it. Level 2 was measuring it. Now you turn what you measured into a formula: one short line that predicts things you have not measured yet. Every lesson has the same three steps. Say the rule in words, fit a number to your own dots, then predict something new and test it.';
@@ -607,6 +627,62 @@ function simPend(controls,st){
       const bx=px+Math.sin(th)*len,by=py+Math.cos(th)*len;ctx.strokeStyle=TOK.ink;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(bx,by);ctx.stroke();circle(ctx,bx,by,13,TOK.amber,TOK.ink);
       stopwatch(ctx,w-12,24,shown,!!tm);label(ctx,'length '+fmt(cur,2)+' m',w-12,56,{align:'right',size:14,mono:true});
       st.setCaption(tm?(tm.cb?'Testing: timing one swing of a 4 metre pendulum.':`Timing swing ${Math.min(tm.n,Math.floor(phase)+1)} of ${tm.n}...`):msg||'Set a length and tap Time 2 swings.');}
+  };
+}
+
+// ---- 9. energy: height becomes speed ----
+function simEnergy(controls,st){
+  const G=9.8;let H=2,cur=2,run=null,speed=0,done=false,cb=null,pred=null,testRun=false;
+  slider(controls,{id:'height',label:'Start height',lo:'0.5 m',hi:'3 m',min:0.5,max:3,step:0.5,value:H,onInput:v=>{if(st.testing||run)return;H=v;cur=v;done=false;speed=0;pred=null;}});
+  button(controls,'Release',()=>{if(st.testing||run)return;cur=H;run={h:H,t:0};done=false;speed=0;pred=null;testRun=false;},{primary:true,id:'release'});
+  return{
+    test(xs,p,k){cur=xs;run={h:xs,t:0};done=false;speed=0;cb=k;pred=p;testRun=true;},
+    draw(ctx,w,h,dt){
+      let u=done?1:0;
+      if(run){const T=0.8+0.35*Math.sqrt(run.h);run.t+=dt;u=Math.min(1,Math.pow(run.t/T,1.6));
+        if(run.t>=T){speed=Math.sqrt(2*G*run.h);done=true;u=1;const k=cb;cb=null;if(k)k(speed);else st.addPoint(+run.h.toFixed(1),+speed.toFixed(2));run=null;}}
+      const base=h*0.84,sc=h*0.66/4.5,x0=Math.max(w*0.16,78),x1=w*0.68,ry=u2=>base-cur*sc*Math.pow(1-u2,2),rx=u2=>x0+(x1-x0)*u2;
+      ctx.fillStyle=TOK.panel2;ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#79b56a';ctx.beginPath();ctx.moveTo(x0,h);for(let i=0;i<=40;i++)ctx.lineTo(rx(i/40),ry(i/40));ctx.lineTo(w,base);ctx.lineTo(w,h);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=TOK.ink;ctx.lineWidth=3;ctx.beginPath();for(let i=0;i<=40;i++)ctx[i?'lineTo':'moveTo'](rx(i/40),ry(i/40));ctx.lineTo(w,base);ctx.stroke();
+      // metre ruler up the left side, and the start height marked on it
+      ctx.fillStyle='#f3e2a5';ctx.fillRect(10,base-4.5*sc,26,4.5*sc);ctx.strokeStyle='#172529';ctx.lineWidth=1.5;
+      for(let i=0;i<=45;i++){const Y=base-i*sc/10,big=i%10===0;ctx.beginPath();ctx.moveTo(10,Y);ctx.lineTo(10+(big?14:i%5===0?9:5),Y);ctx.stroke();if(big)label(ctx,i/10+' m',40,Y,{size:11,align:'left',mono:true});}
+      const sy=base-cur*sc;ctx.strokeStyle=TOK.amber;ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(10,sy);ctx.lineTo(rx(0)+10,sy);ctx.stroke();ctx.setLineDash([]);
+      circle(ctx,rx(u),ry(u)-11,11,TOK.coral,'#172529');
+      // speed gate at the bottom
+      const gx=x1+16;ctx.fillStyle=TOK.ink;ctx.fillRect(gx,base-52,5,52);ctx.fillRect(gx+44,base-52,5,52);ctx.fillStyle='#2b3138';ctx.fillRect(gx-4,base-70,58,18);label(ctx,done?fmt(speed,2):'0.00',gx+25,base-61,{size:12,mono:true,color:'#9be0a4'});label(ctx,'m/s',gx+25,base-78,{size:11,mono:true,color:TOK.muted});
+      label(ctx,'start '+fmt(cur,1)+' m',w-12,24,{align:'right',size:14,mono:true});
+      if(pred!=null)label(ctx,'you predicted '+fmt(pred,1)+' m/s',w-12,46,{align:'right',size:12,weight:700});
+      st.setCaption(run?(testRun?'Testing: releasing the ball from 4 metres.':`Rolling down from ${fmt(run.h,1)} m...`):done?`From ${fmt(cur,1)} m the ball reached ${fmt(speed,2)} m/s at the gate.`+(testRun?'':' Recorded.'):'Choose a start height and tap Release. The speed gate records a dot.');}
+  };
+}
+
+// ---- 10. waves: the gap between ripples ----
+function simWave(controls,st){
+  const C={shallow:12,deep:20};let key='shallow',f=4,t=0,pend=null,cb=null,pred=null,testRun=false,gap=null,lastF=4,hold=null;
+  seg(controls,{id:'water',label:'Water',options:[{v:'shallow',l:'Shallow'},{v:'deep',l:'Deep'}],value:key,onChange:v=>{if(st.testing)return;key=v;pend=null;gap=null;pred=null;hold=null;st.clearPoints();}});
+  slider(controls,{id:'freq',label:'Dipper frequency',lo:'2 per s',hi:'8 per s',min:2,max:8,step:1,value:f,onInput:v=>{if(!st.testing&&!pend){f=v;hold=null;}}});
+  button(controls,'Measure',()=>{if(st.testing||pend)return;hold=null;pend={f,w:0.9};pred=null;testRun=false;},{primary:true,id:'measure'});
+  return{
+    test(xs,p,k){pend={f:xs,w:1.4,test:true};cb=k;pred=p;testRun=true;},
+    draw(ctx,w,h,dt){t+=dt;const c=C[key],fq=pend?pend.f:(hold!=null?hold:f),lam=c/fq;
+      if(pend){pend.w-=dt;if(pend.w<=0){const g=c/pend.f;gap=g;lastF=pend.f;const isTest=pend.test;if(isTest)hold=pend.f;pend=null;if(isTest){const k=cb;cb=null;k(g);}else st.addPoint(lastF,+g.toFixed(2));}}
+      ctx.fillStyle=key==='deep'?'#1f5f86':'#3f93ba';ctx.fillRect(0,0,w,h);
+      const pxcm=(w*0.86)/40,cx=w*0.08,cy=h*0.44,ph=(t*c)%lam;
+      ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=2;for(let r=ph;r<=40;r+=lam){ctx.beginPath();ctx.arc(cx,cy,r*pxcm,0,Math.PI*2);ctx.stroke();}
+      circle(ctx,cx,cy,5,'#ffffff');
+      // a bracket that rides on two neighbouring ripples and shows their gap
+      const r1=ph+Math.floor((14-ph)/lam)*lam,X1=cx+r1*pxcm,X2=cx+(r1+lam)*pxcm;
+      ctx.strokeStyle=TOK.amber;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(X1,cy);ctx.lineTo(X2,cy);ctx.moveTo(X1,cy-7);ctx.lineTo(X1,cy+7);ctx.moveTo(X2,cy-7);ctx.lineTo(X2,cy+7);ctx.stroke();label(ctx,'gap',(X1+X2)/2,cy-16,{size:12,color:'#ffffff'});
+      // ruler in centimetres, zero at the dipper
+      const ry=h*0.82;ctx.fillStyle='#f3e2a5';ctx.fillRect(cx,ry,40*pxcm,28);ctx.strokeStyle='#172529';ctx.lineWidth=1.5;
+      for(let i=0;i<=40;i++){const X=cx+i*pxcm;ctx.beginPath();ctx.moveTo(X,ry);ctx.lineTo(X,ry+(i%5===0?14:7));ctx.stroke();if(i%10===0)label(ctx,String(i),X,ry+21,{size:11,mono:true,color:'#172529'});}
+      label(ctx,'cm',cx+40*pxcm+4,ry+14,{size:11,align:'left',mono:true,color:'#ffffff'});
+      label(ctx,fmt(fq,0)+' ripples per second',12,24,{align:'left',size:14,mono:true,color:'#ffffff'});
+      if(gap!=null&&!pend)label(ctx,'gap measured: '+fmt(gap,1)+' cm',w-12,46,{align:'right',size:13,mono:true,color:'#ffffff'});
+      if(pred!=null)label(ctx,'you predicted '+fmt(pred,1)+' cm',w-12,66,{align:'right',size:12,weight:700,color:'#ffffff'});
+      st.setCaption(pend?(pend.test?'Testing: the dipper speeds up to 10 ripples a second.':'Measuring the gap between ripples...'):gap!=null?`At ${fmt(lastF,0)} ripples a second the gap is ${fmt(gap,1)} cm.`+(testRun?'':' Recorded.'):'Pick shallow or deep water, set the dipper frequency, and tap Measure.');}
   };
 }
 
